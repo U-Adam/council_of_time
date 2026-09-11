@@ -48,6 +48,10 @@ function renderAnswer(text: string, sources: CouncilSource[]) {
   });
 }
 
+function mergeSources(current: CouncilSource[], incoming: CouncilSource[]) {
+  return [...new Map([...current, ...incoming].map((source) => [source.id, source])).values()];
+}
+
 export function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sources, setSources] = useState<CouncilSource[]>([]);
@@ -62,7 +66,19 @@ export function App() {
     const trimmed = question.trim();
     if (!trimmed || pending) return;
 
-    const nextMessages: ChatMessage[] = [...transcript, { role: "user", content: trimmed }];
+    const priorPause = pauseQuestion;
+    const answeringPause = Boolean(priorPause);
+    const contextMessages: ChatMessage[] = priorPause
+      ? [
+          ...transcript,
+          {
+            role: "assistant",
+            content: `The table paused before synthesis with this question for the user: ${priorPause}`,
+          },
+        ]
+      : transcript;
+    const nextMessages: ChatMessage[] = [...contextMessages, { role: "user", content: trimmed }];
+
     setMessages((current) => [...current, { role: "user", content: trimmed }]);
     setInput("");
     setPending(true);
@@ -72,7 +88,11 @@ export function App() {
       const response = await fetch("/api/council", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages }),
+        body: JSON.stringify({
+          messages: nextMessages,
+          phase: answeringPause ? "resume" : "open",
+          pauseQuestion: priorPause,
+        }),
       });
 
       if (!response.ok) {
@@ -82,9 +102,10 @@ export function App() {
 
       const data = (await response.json()) as CouncilResponse;
       setMessages((current) => [...current, { role: "assistant", content: data.answer }]);
-      setSources(data.sources || []);
+      setSources((current) => mergeSources(current, data.sources || []));
       setPauseQuestion(data.pause?.question || null);
     } catch (error) {
+      setPauseQuestion(priorPause);
       setMessages((current) => [
         ...current,
         {
