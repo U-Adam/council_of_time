@@ -3,13 +3,19 @@ import { selectSources } from "./sources";
 
 type Message = { role: "user" | "assistant"; content: string };
 
+type CouncilRequest = {
+  messages?: unknown;
+  phase?: unknown;
+  pauseQuestion?: unknown;
+};
+
 interface Env {
   AI: Ai;
   ASSETS: Fetcher;
   COUNCIL_MODEL?: string;
 }
 
-const MAX_MESSAGES = 10;
+const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8000;
 
 function json(data: unknown, init: ResponseInit = {}) {
@@ -52,8 +58,13 @@ function extractPause(answer: string) {
   return { answer: cleaned, pause: { question: match[1].trim() } };
 }
 
+function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
+  if (phase !== "resume" || typeof pauseQuestion !== "string" || !pauseQuestion.trim()) return "";
+  return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
+}
+
 async function handleCouncil(request: Request, env: Env) {
-  const body = await request.json().catch(() => null) as { messages?: unknown } | null;
+  const body = await request.json().catch(() => null) as CouncilRequest | null;
   const messages = sanitizeMessages(body?.messages);
   if (!messages.length || messages[messages.length - 1]?.role !== "user") {
     return json({ error: "A user question is required." }, { status: 400 });
@@ -62,11 +73,15 @@ async function handleCouncil(request: Request, env: Env) {
   const combinedUserText = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
   const sources = selectSources(combinedUserText);
   const model = env.COUNCIL_MODEL || "@cf/google/gemma-4-26b-a4b-it";
+  const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
 
   try {
     const result = await env.AI.run(model as Parameters<Ai["run"]>[0], {
       messages: [
-        { role: "system", content: `${COUNCIL_SYSTEM_PROMPT}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}` },
+        {
+          role: "system",
+          content: `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`,
+        },
         ...messages,
       ],
       max_tokens: 1800,
@@ -79,6 +94,7 @@ async function handleCouncil(request: Request, env: Env) {
 
     return json({
       ...parsed,
+      phase: body?.phase === "resume" ? "resume" : "open",
       sources: sources.map(({ tags: _tags, ...source }) => source),
       model,
     });
