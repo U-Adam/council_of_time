@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "council-of-time",
+  "compatibility_date": "2026-09-11",
+  "main": "./worker/index.ts",
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "COUNCIL_MODEL": "@cf/google/gemma-4-26b-a4b-it"
+  }
+}
