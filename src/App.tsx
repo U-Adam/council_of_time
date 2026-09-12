@@ -27,8 +27,8 @@ type FailedAttempt = {
 function SourceLinks({ sources }: { sources: CouncilSource[] }) {
   if (!sources.length) return null;
   return (
-    <section className="sources" aria-label="Sources">
-      <div className="section-kicker">Sources</div>
+    <section className="sources" aria-label="Sources cited by the Council">
+      <div className="section-kicker">Sources cited</div>
       <div className="source-grid">
         {sources.map((source) => (
           <a key={source.id} href={source.url} target="_blank" rel="noreferrer" className="source-card">
@@ -78,6 +78,24 @@ function mergeSources(current: CouncilSource[], incoming: CouncilSource[]) {
   return [...new Map([...current, ...incoming].map((source) => [source.id, source])).values()];
 }
 
+function citedSourceIds(messages: ChatMessage[]) {
+  const orderedIds: string[] = [];
+  const seen = new Set<string>();
+
+  for (const message of messages) {
+    if (message.role !== "assistant") continue;
+    for (const match of message.content.matchAll(/\[S(\d+)\]/g)) {
+      const id = `S${match[1]}`;
+      if (!seen.has(id)) {
+        seen.add(id);
+        orderedIds.push(id);
+      }
+    }
+  }
+
+  return orderedIds;
+}
+
 export function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sources, setSources] = useState<CouncilSource[]>([]);
@@ -88,6 +106,12 @@ export function App() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const transcript = useMemo(() => messages.slice(-10), [messages]);
+  const citedSources = useMemo(() => {
+    const sourceById = new Map(sources.map((source) => [source.id, source]));
+    return citedSourceIds(messages)
+      .map((id) => sourceById.get(id))
+      .filter((source): source is CouncilSource => Boolean(source));
+  }, [messages, sources]);
 
   async function requestCouncil(payload: CouncilPayload, priorPause: string | null) {
     const controller = new AbortController();
@@ -287,7 +311,7 @@ export function App() {
           </div>
         )}
 
-        {hasConversation && <SourceLinks sources={sources} />}
+        {hasConversation && <SourceLinks sources={citedSources} />}
 
         <div className="privacy-note">
           <ShieldCheck size={14} /> This build stores no conversation history on the Council server.
