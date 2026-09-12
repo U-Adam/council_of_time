@@ -227,6 +227,43 @@ async function handleCouncilSmoke(env: Env) {
   }
 }
 
+async function handleResumeSmoke(env: Env) {
+  const originalQuestion = "Can love survive contempt?";
+  const priorPause = "Is the contempt in question a reaction to specific, identifiable behaviors or failures of the partner, or is it a generalized, pervasive disdain for who the partner is at their core?";
+  const userAnswer = "It is chronic, and the contempt is described as justified.";
+  const messages: Message[] = [
+    { role: "user", content: originalQuestion },
+    { role: "assistant", content: `The table paused before synthesis with this question for the user: ${priorPause}` },
+    { role: "user", content: userAnswer },
+  ];
+  const sources = selectSources(`${originalQuestion}\n${userAnswer}`);
+  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${continuationInstruction("resume", priorPause)}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
+  const requestId = `resume-${crypto.randomUUID().slice(0, 6)}`;
+
+  try {
+    const { raw, model, failures } = await runCouncilModel(
+      env,
+      uniqueModels(env.COUNCIL_MODEL),
+      messages,
+      systemPrompt,
+      requestId,
+    );
+    const parsed = extractPause(raw);
+    return json({
+      ok: Boolean(parsed.answer),
+      model,
+      recoveredWithFallback: failures.length > 0,
+      answerPreview: parsed.answer.slice(0, 2000),
+      pause: parsed.pause,
+      hasCouncilFinding: /council finding/i.test(parsed.answer),
+      repeatedPriorQuestion: parsed.pause?.question?.trim() === priorPause.trim(),
+      sourceIds: sources.map((source) => source.id),
+    });
+  } catch (error) {
+    return json({ ok: false, error: errorDetail(error) }, { status: 503 });
+  }
+}
+
 async function handleCouncil(request: Request, env: Env) {
   const requestId = crypto.randomUUID().slice(0, 8);
   const body = (await request.json().catch(() => null)) as CouncilRequest | null;
@@ -298,7 +335,9 @@ export default {
 
     if (url.pathname === "/api/_smoke" && request.method === "GET") {
       if (url.searchParams.get("key") !== SMOKE_KEY) return json({ error: "Not found" }, { status: 404 });
-      if (url.searchParams.get("mode") === "council") return handleCouncilSmoke(env);
+      const mode = url.searchParams.get("mode");
+      if (mode === "council") return handleCouncilSmoke(env);
+      if (mode === "resume") return handleResumeSmoke(env);
       return handleModelSmoke(env);
     }
 
