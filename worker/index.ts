@@ -43,7 +43,7 @@ function sanitizeMessages(value: unknown): Message[] {
     .map((message) => ({ ...message, content: message.content.slice(0, MAX_MESSAGE_CHARS) }));
 }
 
-function parseModelText(result: unknown): string {
+export function parseModelText(result: unknown): string {
   if (typeof result === "string") return result.trim();
   if (!result || typeof result !== "object") return "";
 
@@ -77,14 +77,14 @@ function finishReason(result: unknown): string | null {
   return typeof reason === "string" ? reason : null;
 }
 
-function extractPause(answer: string) {
+export function extractPause(answer: string) {
   const match = answer.match(/(?:^|\n)PAUSE_QUESTION:\s*(.+?)\s*$/s);
   if (!match) return { answer: answer.trim(), pause: null };
   const cleaned = answer.replace(/(?:^|\n)PAUSE_QUESTION:\s*(.+?)\s*$/s, "").trim();
   return { answer: cleaned, pause: { question: match[1].trim() } };
 }
 
-function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
+export function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
   if (phase !== "resume" || typeof pauseQuestion !== "string" || !pauseQuestion.trim()) return "";
   return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
 }
@@ -103,7 +103,7 @@ function errorDetail(error: unknown) {
   }
 }
 
-function generationOptions(model: string, maxTokens: number, temperature: number) {
+export function generationOptions(model: string, maxTokens: number, temperature: number) {
   if (model === "@cf/meta/llama-3.1-8b-instruct-fast") {
     return {
       max_tokens: maxTokens,
@@ -120,7 +120,19 @@ function generationOptions(model: string, maxTokens: number, temperature: number
   };
 }
 
-async function runCouncilModel(env: Env, models: string[], messages: Message[], systemPrompt: string, requestId: string) {
+export function invalidCitationIds(answer: string, allowedSourceIds: Set<string>) {
+  const cited = [...answer.matchAll(/\[(S\d+)\]/g)].map((match) => match[1]);
+  return [...new Set(cited.filter((id) => !allowedSourceIds.has(id)))];
+}
+
+async function runCouncilModel(
+  env: Env,
+  models: string[],
+  messages: Message[],
+  systemPrompt: string,
+  allowedSourceIds: Set<string>,
+  requestId: string,
+) {
   const failures: Array<{ model: string; detail: string }> = [];
 
   for (const model of models) {
@@ -133,6 +145,11 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
 
       const raw = parseModelText(result);
       if (!raw) throw new Error("Model returned an empty or unrecognized response.");
+
+      const invalidCitations = invalidCitationIds(raw, allowedSourceIds);
+      if (invalidCitations.length) {
+        throw new Error(`Model cited sources outside the allowed set: ${invalidCitations.join(", ")}`);
+      }
 
       console.log(JSON.stringify({
         requestId,
@@ -179,18 +196,26 @@ async function handleCouncil(request: Request, env: Env) {
 
   const combinedUserText = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
   const sources = selectSources(combinedUserText);
+  const allowedSourceIds = new Set(sources.map((source) => source.id));
   const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
   const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
   const models = uniqueModels(env.COUNCIL_MODEL);
 
   try {
-    const { raw, model, failures } = await runCouncilModel(env, models, messages, systemPrompt, requestId);
+    const { raw, model, failures } = await runCouncilModel(
+      env,
+      models,
+      messages,
+      systemPrompt,
+      allowedSourceIds,
+      requestId,
+    );
     const parsed = extractPause(raw);
 
     return json({
       ...parsed,
       phase: body?.phase === "resume" ? "resume" : "open",
-      sources: sources.map(({ tags: _tags, ...source }) => source),
+      sources: sources.map(({ tags: _tags, anchors: _anchors, note: _note, ...source }) => source),
       model,
       recoveredWithFallback: failures.length > 0,
       requestId,
