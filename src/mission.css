@@ -14,6 +14,8 @@
   z-index: 0;
 }
 
+/* Keep the page quiet. Technology appears where it belongs—in the technical section—
+   rather than turning the entire experience into a dashboard or science-fiction set. */
 .about-shell::before {
   content: "";
   position: fixed;
@@ -21,11 +23,8 @@
   z-index: -2;
   pointer-events: none;
   background:
-    radial-gradient(circle at 82% 12%, rgba(185,146,73,.075), transparent 29%),
-    radial-gradient(circle at 9% 72%, rgba(239,230,216,.025), transparent 28%),
-    linear-gradient(rgba(239,230,216,.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(239,230,216,.018) 1px, transparent 1px);
-  background-size: auto, auto, 48px 48px, 48px 48px;
+    radial-gradient(circle at 82% 12%, rgba(185,146,73,.060), transparent 29%),
+    radial-gradient(circle at 9% 72%, rgba(239,230,216,.020), transparent 28%);
 }
 
 .about-topbar {
@@ -68,8 +67,8 @@
   width: min(42vw, 390px);
   aspect-ratio: 1;
   background: url('/council-mark.svg') center / contain no-repeat;
-  opacity: .035;
-  filter: grayscale(.18) saturate(.55);
+  opacity: .022;
+  filter: grayscale(.18) saturate(.48);
   pointer-events: none;
 }
 
@@ -297,7 +296,7 @@
   width: 260px;
   aspect-ratio: 1;
   background: url('/council-mark.svg') center / contain no-repeat;
-  opacity: .018;
+  opacity: .014;
   pointer-events: none;
 }
 
@@ -362,7 +361,7 @@
     top: 40px;
     right: -118px;
     width: 310px;
-    opacity: .026;
+    opacity: .018;
   }
 
   .about-panel {
