@@ -88,12 +88,18 @@ textarea::placeholder { color: #79736b; }
 .answer-link { color: #e7c473; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .inline-cite { color: var(--gold); text-decoration: none; font-family: Inter, sans-serif; font-size: .68em; position: relative; top: -.38em; margin-left: 2px; white-space: nowrap; }
 .inline-cite:hover, .answer-link:hover { color: #f0cc7c; }
-.loading { color: var(--muted); }
-.thinking { display: flex; align-items: center; gap: 5px; font-family: Inter, sans-serif; font-size: 14px; }
-.thinking i { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: .35; animation: pulse 1.2s infinite; }
-.thinking i:nth-child(2) { animation-delay: .2s; }
-.thinking i:nth-child(3) { animation-delay: .4s; margin-right: 7px; }
+.loading { color: var(--muted); min-height: 34px; }
+.thinking { display: flex; align-items: center; gap: 10px; font-family: Inter, sans-serif; font-size: 14px; min-height: 24px; }
+.thinking-dots { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.thinking-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: .35; animation: pulse 1.2s infinite; }
+.thinking-dots i:nth-child(2) { animation-delay: .2s; }
+.thinking-dots i:nth-child(3) { animation-delay: .4s; }
+.thinking-copy { color: #b8b0a5; line-height: 1.45; animation: status-in .32s ease both; }
 @keyframes pulse { 50% { opacity: 1; transform: translateY(-2px); } }
+@keyframes status-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .pause-card { border-left: 2px solid var(--rust); background: rgba(185,101,69,.07); padding: 18px 20px; margin: 8px 0 22px; border-radius: 0 14px 14px 0; }
 .pause-card .section-kicker { color: #d78361; }
@@ -128,4 +134,6 @@ textarea::placeholder { color: #79736b; }
   .message.assistant .message-body { font-size: 17px; line-height: 1.66; }
   .message.assistant .message-body h2 { font-size: 18px; }
   .message.assistant .message-body h3 { font-size: 15px; }
+  .thinking { align-items: flex-start; }
+  .thinking-dots { padding-top: 7px; }
 }
