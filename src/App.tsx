@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { ArrowUp, ExternalLink, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
 import type { ChatMessage, CouncilResponse, CouncilSource } from "./types";
 
@@ -7,6 +8,8 @@ const STARTERS = [
   "What do I owe someone after I change my mind?",
   "When does forgiveness become permission?",
 ];
+
+const REQUEST_TIMEOUT_MS = 75_000;
 
 type CouncilPayload = {
   messages: ChatMessage[];
@@ -40,25 +43,35 @@ function SourceLinks({ sources }: { sources: CouncilSource[] }) {
 }
 
 function renderAnswer(text: string, sources: CouncilSource[]) {
-  const sourceMap = new Map(sources.map((source) => [source.id, source]));
-  const tokens = text.split(/(\[S\d+\])/g);
-  return tokens.map((token, index) => {
-    const id = token.match(/^\[(S\d+)\]$/)?.[1];
-    const source = id ? sourceMap.get(id) : undefined;
-    if (!source) return <span key={index}>{token}</span>;
-    return (
-      <a
-        key={`${id}-${index}`}
-        href={source.url}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-cite"
-        aria-label={`Open source ${id}: ${source.title}`}
-      >
-        [{id.replace("S", "")}]
-      </a>
-    );
+  const sourceById = new Map(sources.map((source) => [source.id, source]));
+  const sourceByUrl = new Map(sources.map((source) => [source.url, source]));
+  const markdown = text.replace(/\[S(\d+)\]/g, (token, number) => {
+    const source = sourceById.get(`S${number}`);
+    return source ? `[\\[${number}\\]](${source.url})` : token;
   });
+
+  return (
+    <ReactMarkdown
+      components={{
+        a: ({ href, children }) => {
+          const source = href ? sourceByUrl.get(href) : undefined;
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className={source ? "inline-cite" : "answer-link"}
+              aria-label={source ? `Open source ${source.id}: ${source.title}` : undefined}
+            >
+              {children}
+            </a>
+          );
+        },
+      }}
+    >
+      {markdown}
+    </ReactMarkdown>
+  );
 }
 
 function mergeSources(current: CouncilSource[], incoming: CouncilSource[]) {
@@ -77,11 +90,15 @@ export function App() {
   const transcript = useMemo(() => messages.slice(-10), [messages]);
 
   async function requestCouncil(payload: CouncilPayload, priorPause: string | null) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
       const response = await fetch("/api/council", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
       const body = await response.json().catch(() => ({}));
@@ -101,14 +118,18 @@ export function App() {
       setFailedAttempt(null);
     } catch (error) {
       const typed = error as Error & { requestId?: string };
+      const timedOut = typed?.name === "AbortError";
       setPauseQuestion(priorPause);
       setFailedAttempt({
         payload,
         priorPause,
-        message: typed?.message || "The Council could not convene. Try again in a moment.",
+        message: timedOut
+          ? "The Council took too long to answer. Nothing was lost; try the same question again."
+          : typed?.message || "The Council could not convene. Try again in a moment.",
         requestId: typed?.requestId,
       });
     } finally {
+      window.clearTimeout(timeout);
       setPending(false);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
