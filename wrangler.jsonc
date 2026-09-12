@@ -13,6 +13,10 @@
   "ai": {
     "binding": "AI"
   },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   "vars": {
     "COUNCIL_MODEL": "@cf/google/gemma-4-26b-a4b-it"
   }
