@@ -216,7 +216,6 @@ export function App() {
 
     setConveningLine("Reading the question…");
     let planResolved = false;
-    schedule("Selecting the voices that disagree most usefully…", 650);
     schedule("Checking the source material…", 2800);
     schedule("The table is arguing…", 5200);
     schedule("Bourdain is looking for the fault line…", 8200);
@@ -250,7 +249,7 @@ export function App() {
         if (!planResolved && conveningSequence.current === sequence) {
           setConveningLine("Selecting the voices that disagree most usefully…");
         }
-      }, 900),
+      }, 700),
     );
   }
 
