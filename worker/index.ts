@@ -17,6 +17,8 @@ interface Env {
 
 const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8000;
+const DEFAULT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
+const FALLBACK_MODEL = "@cf/zai-org/glm-4.7-flash";
 
 function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -42,12 +44,29 @@ function sanitizeMessages(value: unknown): Message[] {
 }
 
 function parseModelText(result: unknown): string {
-  if (typeof result === "string") return result;
+  if (typeof result === "string") return result.trim();
   if (!result || typeof result !== "object") return "";
+
   const record = result as Record<string, any>;
-  if (typeof record.response === "string") return record.response;
+
+  if (typeof record.response === "string") return record.response.trim();
+  if (typeof record.output_text === "string") return record.output_text.trim();
+  if (typeof record.text === "string") return record.text.trim();
+  if (typeof record.content === "string") return record.content.trim();
+
   const choices = record.choices;
-  if (Array.isArray(choices) && typeof choices[0]?.message?.content === "string") return choices[0].message.content;
+  if (Array.isArray(choices)) {
+    const content = choices[0]?.message?.content ?? choices[0]?.text;
+    if (typeof content === "string") return content.trim();
+    if (Array.isArray(content)) {
+      const joined = content
+        .map((part: any) => (typeof part?.text === "string" ? part.text : typeof part === "string" ? part : ""))
+        .join("")
+        .trim();
+      if (joined) return joined;
+    }
+  }
+
   return "";
 }
 
@@ -63,33 +82,70 @@ function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
   return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
 }
 
+function uniqueModels(primary?: string) {
+  return [...new Set([primary || DEFAULT_MODEL, DEFAULT_MODEL, FALLBACK_MODEL].filter(Boolean))];
+}
+
+function errorDetail(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+async function runCouncilModel(env: Env, models: string[], messages: Message[], systemPrompt: string, requestId: string) {
+  const failures: Array<{ model: string; detail: string }> = [];
+
+  for (const model of models) {
+    try {
+      const result = await env.AI.run(model as Parameters<Ai["run"]>[0], {
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        max_completion_tokens: 1800,
+        temperature: 0.35,
+      } as any);
+
+      const raw = parseModelText(result);
+      if (!raw) throw new Error("Model returned an empty or unrecognized response.");
+
+      return { raw, model, failures };
+    } catch (error) {
+      const detail = errorDetail(error);
+      failures.push({ model, detail });
+      console.error(JSON.stringify({ requestId, event: "council_model_failure", model, detail }));
+    }
+  }
+
+  throw Object.assign(new Error("All Council models failed."), { failures });
+}
+
 async function handleCouncil(request: Request, env: Env) {
-  const body = await request.json().catch(() => null) as CouncilRequest | null;
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const body = (await request.json().catch(() => null)) as CouncilRequest | null;
   const messages = sanitizeMessages(body?.messages);
+
   if (!messages.length || messages[messages.length - 1]?.role !== "user") {
-    return json({ error: "A user question is required." }, { status: 400 });
+    return json({ error: "A user question is required.", requestId }, { status: 400 });
+  }
+
+  if (!env.AI) {
+    console.error(JSON.stringify({ requestId, event: "missing_ai_binding" }));
+    return json(
+      { error: "The Council AI binding is unavailable. Please try again shortly.", requestId },
+      { status: 503 },
+    );
   }
 
   const combinedUserText = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
   const sources = selectSources(combinedUserText);
-  const model = env.COUNCIL_MODEL || "@cf/google/gemma-4-26b-a4b-it";
   const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
+  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
+  const models = uniqueModels(env.COUNCIL_MODEL);
 
   try {
-    const result = await env.AI.run(model as Parameters<Ai["run"]>[0], {
-      messages: [
-        {
-          role: "system",
-          content: `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`,
-        },
-        ...messages,
-      ],
-      max_tokens: 1800,
-      temperature: 0.35,
-    } as any);
-
-    const raw = parseModelText(result);
-    if (!raw) throw new Error("The model returned an empty response.");
+    const { raw, model, failures } = await runCouncilModel(env, models, messages, systemPrompt, requestId);
     const parsed = extractPause(raw);
 
     return json({
@@ -97,17 +153,24 @@ async function handleCouncil(request: Request, env: Env) {
       phase: body?.phase === "resume" ? "resume" : "open",
       sources: sources.map(({ tags: _tags, ...source }) => source),
       model,
+      recoveredWithFallback: failures.length > 0,
+      requestId,
     });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    const quota = /quota|limit|neurons|capacity|429|3040|5035|403/i.test(detail);
+    const failures = (error as any)?.failures as Array<{ model: string; detail: string }> | undefined;
+    const details = failures?.map((failure) => failure.detail).join(" | ") || errorDetail(error);
+    const quotaOrRate = /quota|limit|neurons|capacity|429|3040|5035|rate/i.test(details);
+
+    console.error(JSON.stringify({ requestId, event: "council_all_models_failed", details }));
+
     return json(
       {
-        error: quota
-          ? "The Council has reached today's free inference allowance. It will reopen automatically when Cloudflare's daily allowance resets."
-          : "The Council could not convene just now. Please try again.",
+        error: quotaOrRate
+          ? "The Council is temporarily at AI capacity. Please try again in a moment."
+          : "The Council's AI service failed to answer. Please try again in a moment.",
+        requestId,
       },
-      { status: quota ? 429 : 500 },
+      { status: 503 },
     );
   }
 }
@@ -117,7 +180,14 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/health") {
-      return json({ ok: true, service: "council-of-time", storage: "stateless" });
+      return json({
+        ok: true,
+        service: "council-of-time",
+        storage: "stateless",
+        aiBinding: Boolean(env.AI),
+        primaryModel: env.COUNCIL_MODEL || DEFAULT_MODEL,
+        fallbackModel: FALLBACK_MODEL,
+      });
     }
 
     if (url.pathname === "/api/council" && request.method === "POST") {
