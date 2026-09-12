@@ -18,7 +18,7 @@ interface Env {
 const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8000;
 const DEFAULT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
-const FALLBACK_MODEL = "@cf/zai-org/glm-4.7-flash";
+const FALLBACK_MODELS = ["@cf/zai-org/glm-4.7-flash", "@cf/qwen/qwen3-30b-a3b-fp8"];
 
 function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -83,7 +83,7 @@ function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
 }
 
 function uniqueModels(primary?: string) {
-  return [...new Set([primary || DEFAULT_MODEL, DEFAULT_MODEL, FALLBACK_MODEL].filter(Boolean))];
+  return [...new Set([primary || DEFAULT_MODEL, DEFAULT_MODEL, ...FALLBACK_MODELS].filter(Boolean))];
 }
 
 function errorDetail(error: unknown) {
@@ -100,6 +100,7 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
   const failures: Array<{ model: string; detail: string }> = [];
 
   for (const model of models) {
+    const startedAt = Date.now();
     try {
       const result = await env.AI.run(model as Parameters<Ai["run"]>[0], {
         messages: [{ role: "system", content: systemPrompt }, ...messages],
@@ -110,11 +111,25 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
       const raw = parseModelText(result);
       if (!raw) throw new Error("Model returned an empty or unrecognized response.");
 
+      console.log(JSON.stringify({
+        requestId,
+        event: "council_model_success",
+        model,
+        latencyMs: Date.now() - startedAt,
+        fallbackDepth: failures.length,
+      }));
+
       return { raw, model, failures };
     } catch (error) {
       const detail = errorDetail(error);
       failures.push({ model, detail });
-      console.error(JSON.stringify({ requestId, event: "council_model_failure", model, detail }));
+      console.error(JSON.stringify({
+        requestId,
+        event: "council_model_failure",
+        model,
+        latencyMs: Date.now() - startedAt,
+        detail,
+      }));
     }
   }
 
@@ -186,7 +201,7 @@ export default {
         storage: "stateless",
         aiBinding: Boolean(env.AI),
         primaryModel: env.COUNCIL_MODEL || DEFAULT_MODEL,
-        fallbackModel: FALLBACK_MODEL,
+        fallbackModels: FALLBACK_MODELS,
       });
     }
 
