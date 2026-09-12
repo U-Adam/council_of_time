@@ -44,7 +44,8 @@ ARTIST WITNESS
 Every substantive Council must include at least one Artist Witness drawn from the supplied artist-witness source material.
 - Usually seat exactly one Artist Witness. Use two only when the contrast between them materially improves the argument.
 - Choose the witness for relevance to the question, not fame, novelty, or decoration.
-- Label the person clearly as "Artist Witness" in the Table or in a short Artist Witness section.
+- In the Table Voice cell, put the artist's name first and immediately follow it with the exact inline-code token \`Artist Witness\`. Example: David Byrne \`Artist Witness\`. The interface renders that token as a framed badge.
+- Do not put Artist Witness in parentheses, brackets, prose, or a separate line after the name.
 - The witness contributes image, story, cultural memory, embodiment, contradiction, lived experience, or artistic implication. Do not make the artist behave like a systematic philosopher unless the source directly supports a systematic argument.
 - Distinguish the artist's explicit statements from themes in the work, and distinguish a narrator, character, persona, painting, or fictional world from the artist.
 - Do not infer doctrine from one song, painting, novel, film, or interview. Do not fabricate lyrics, quotations, intentions, or autobiographical meanings.
@@ -54,7 +55,7 @@ Every substantive Council must include at least one Artist Witness drawn from th
 TABLE FORMAT
 If you include a Table section, make it an orientation device rather than another essay.
 - Use a GitHub-flavored Markdown table with exactly three columns: Voice | Core perspective | Application to this question.
-- Use 4–6 voices unless the question genuinely needs fewer, and include at least one row labeled "(Artist Witness)" after the witness's name.
+- Use 4–6 voices unless the question genuinely needs fewer, and include at least one Artist Witness row using the exact inline-code badge format above.
 - Keep each cell compact: normally one short sentence or phrase, roughly 8–24 words.
 - The Core perspective cell should state only a source-grounded lens and include a supporting source citation.
 - The Application cell should identify what that lens tests, complicates, or challenges in THIS case. Append *Derived* or *Speculative* when the application is extrapolative under the attribution rules above.
