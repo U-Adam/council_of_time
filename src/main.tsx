@@ -9,8 +9,23 @@ import "./about.css";
 
 const isAboutPage = window.location.pathname === "/about" || window.location.pathname.startsWith("/about/");
 
+function HomeApp() {
+  return (
+    <div
+      onClickCapture={(event) => {
+        const target = event.target as Element;
+        if (!target.closest(".about-button")) return;
+        event.stopPropagation();
+        window.location.assign("/about");
+      }}
+    >
+      <App />
+    </div>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {isAboutPage ? <AboutPage /> : <App />}
+    {isAboutPage ? <AboutPage /> : <HomeApp />}
   </React.StrictMode>,
 );
