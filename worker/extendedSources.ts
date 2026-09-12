@@ -100,4 +100,22 @@ export const EXTENDED_SOURCE_CATALOG: PublicSource[] = [
     tags: ["travel", "food", "culture", "hospitality", "curiosity", "humility", "class", "dignity", "people", "place"],
     note: "Use Parts Unknown as evidence of Bourdain's recurring practice of approaching places through food, ordinary people, history, work, and lived culture. Do not convert recurring themes into a rigid doctrine or invent quotations, intentions, or views not supported by an episode or interview.",
   },
+  {
+    id: "S38",
+    title: "Churchill Archives Centre — Sir Winston Churchill: A biography",
+    url: "https://archives.chu.cam.ac.uk/collections/churchill-papers/churchill-biography/",
+    kind: "official",
+    anchors: ["winston churchill", "churchill"],
+    tags: ["leadership", "war", "politics", "parliament", "crisis", "judgment", "statesmanship", "legacy", "empire", "democracy"],
+    note: "CASE MATERIAL about Winston Churchill, not a Council membership source. Use it to ground broad biographical and career claims, including his political rise, wartime leadership, setbacks, and later statesmanship. Do not turn admiration for wartime leadership into a complete moral judgment of his career, and do not seat Churchill as a Council member merely because this source is present.",
+  },
+  {
+    id: "S39",
+    title: "UK Parliament — Winston Churchill and Parliament",
+    url: "https://www.parliament.uk/churchill/",
+    kind: "official",
+    anchors: ["winston churchill", "churchill"],
+    tags: ["parliament", "oratory", "war", "leadership", "democracy", "politics", "rhetoric", "public life", "legacy"],
+    note: "CASE MATERIAL about Churchill's parliamentary career, wartime role, and oratory, not a Council membership source. Use it for claims about Churchill in Parliament and the public record represented by the collection. Avoid implying that rhetorical effectiveness alone establishes moral or political greatness.",
+  },
 ];
