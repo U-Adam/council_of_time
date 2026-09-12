@@ -1,6 +1,7 @@
 import { COUNCIL_SYSTEM_PROMPT, formatSourceContext } from "./prompt";
+import { ARTIST_SOURCE_CATALOG } from "./artistSources";
 import { ensureArtistWitness } from "./artistWitness";
-import { selectSources } from "./sources";
+import { selectSources, SOURCE_CATALOG, type PublicSource } from "./sources";
 import { createTablePlan } from "./tablePlan";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -9,6 +10,7 @@ type CouncilRequest = {
   messages?: unknown;
   phase?: unknown;
   pauseQuestion?: unknown;
+  sourceIds?: unknown;
 };
 
 interface Env {
@@ -21,6 +23,8 @@ const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8000;
 const DEFAULT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 const FALLBACK_MODELS = ["@cf/zai-org/glm-4.7-flash", "@cf/meta/llama-3.1-8b-instruct-fast"];
+const ALL_SOURCE_CATALOG = [...SOURCE_CATALOG, ...ARTIST_SOURCE_CATALOG];
+const SOURCE_BY_ID = new Map(ALL_SOURCE_CATALOG.map((source) => [source.id, source]));
 
 function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -43,6 +47,15 @@ function sanitizeMessages(value: unknown): Message[] {
     })
     .slice(-MAX_MESSAGES)
     .map((message) => ({ ...message, content: message.content.slice(0, MAX_MESSAGE_CHARS) }));
+}
+
+function sanitizeSourceIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((item): item is string => typeof item === "string" && /^S\d+$/.test(item)))].slice(0, 12);
+}
+
+function resolveSources(ids: string[]): PublicSource[] {
+  return ids.map((id) => SOURCE_BY_ID.get(id)).filter((source): source is PublicSource => Boolean(source));
 }
 
 export function parseModelText(result: unknown): string {
@@ -88,7 +101,7 @@ export function extractPause(answer: string) {
 
 export function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
   if (phase !== "resume" || typeof pauseQuestion !== "string" || !pauseQuestion.trim()) return "";
-  return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
+  return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Keep the existing table and source roster unless the user's answer itself makes one of those voices irrelevant. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
 }
 
 function uniqueModels(primary?: string) {
@@ -213,7 +226,11 @@ async function handleCouncil(request: Request, env: Env) {
   }
 
   const combinedUserText = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
-  const sources = ensureArtistWitness(selectSources(combinedUserText), combinedUserText);
+  const requestedSourceIds = sanitizeSourceIds(body?.sourceIds);
+  const preservedSources = body?.phase === "resume" ? resolveSources(requestedSourceIds) : [];
+  const sources = preservedSources.length
+    ? ensureArtistWitness(preservedSources, combinedUserText)
+    : ensureArtistWitness(selectSources(combinedUserText), combinedUserText);
   const allowedSourceIds = new Set(sources.map((source) => source.id));
   const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
   const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
