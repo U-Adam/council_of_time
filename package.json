@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "vitest run",
     "preview": "npm run build && vite preview",
     "deploy": "npm run build && wrangler deploy",
     "cf-typegen": "wrangler types"
@@ -24,6 +25,7 @@
     "@vitejs/plugin-react": "latest",
     "typescript": "latest",
     "vite": "latest",
+    "vitest": "latest",
     "wrangler": "latest"
   }
 }
