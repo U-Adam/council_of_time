@@ -15,9 +15,9 @@ function stableIndex(text: string, length: number) {
   return length ? hash % length : 0;
 }
 
-export function selectArtistWitness(text: string): PublicSource {
+export function selectArtistWitness(text: string, contextSources: PublicSource[] = []): PublicSource {
   const normalized = text.toLowerCase();
-  const scored = ARTIST_SOURCE_CATALOG.map((source, index) => ({
+  const directScored = ARTIST_SOURCE_CATALOG.map((source, index) => ({
     source,
     index,
     score:
@@ -25,7 +25,21 @@ export function selectArtistWitness(text: string): PublicSource {
       source.tags.reduce((total, tag) => total + (normalized.includes(tag) ? 4 : 0), 0),
   })).sort((a, b) => b.score - a.score || a.index - b.index);
 
-  if (scored[0]?.score > 0) return scored[0].source;
+  if (directScored[0]?.score > 0) return directScored[0].source;
+
+  const contextTags = new Set(
+    contextSources
+      .filter((source) => !["S28", "S29"].includes(source.id))
+      .slice(0, 4)
+      .flatMap((source) => source.tags),
+  );
+  const contextual = ARTIST_SOURCE_CATALOG.map((source, index) => ({
+    source,
+    index,
+    score: source.tags.reduce((total, tag) => total + (contextTags.has(tag) ? 1 : 0), 0),
+  })).sort((a, b) => b.score - a.score || a.index - b.index);
+
+  if (contextual[0]?.score > 0) return contextual[0].source;
 
   // Broad questions still get an artist witness, but do not pretend a precise match exists.
   // Rotate deterministically so generic prompts do not always receive the same witness.
@@ -35,7 +49,7 @@ export function selectArtistWitness(text: string): PublicSource {
 export function ensureArtistWitness(sources: PublicSource[], text: string, max = 9): PublicSource[] {
   if (sources.some((source) => ARTIST_WITNESS_IDS.has(source.id))) return sources.slice(0, max);
 
-  const witness = selectArtistWitness(text);
+  const witness = selectArtistWitness(text, sources);
   const moderatorIds = new Set(["S28", "S29"]);
   const moderators = sources.filter((source) => moderatorIds.has(source.id));
   const topical = sources.filter((source) => !moderatorIds.has(source.id));
