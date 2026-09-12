@@ -1,0 +1,44 @@
+.message.assistant .message-body em {
+  display: inline-flex;
+  align-items: center;
+  margin-left: .38em;
+  padding: .14em .48em .16em;
+  border: 1px solid rgba(212, 168, 79, .24);
+  border-radius: 999px;
+  background: rgba(212, 168, 79, .07);
+  color: #bca56f;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: .58em;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+  vertical-align: .14em;
+  white-space: nowrap;
+}
+
+.message.assistant .message-body em:has(> :not(:only-child)) {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-style: italic;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  vertical-align: baseline;
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .message.assistant .message-body em {
+    font-size: .6em;
+    margin-left: .32em;
+  }
+}
