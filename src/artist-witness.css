@@ -1,0 +1,30 @@
+.council-table-wrap td:first-child code {
+  display: inline-flex;
+  align-items: center;
+  margin-left: .5em;
+  padding: .22em .52em .24em;
+  border: 1px solid rgba(212, 168, 79, .48);
+  border-radius: 999px;
+  background: rgba(212, 168, 79, .08);
+  color: #dfbd74;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: .58em;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+  vertical-align: .18em;
+  white-space: nowrap;
+}
+
+.council-table-wrap td:first-child code::before {
+  content: none;
+}
+
+@media (max-width: 640px) {
+  .council-table-wrap td:first-child code {
+    margin-left: .45em;
+    font-size: .55em;
+    vertical-align: .16em;
+  }
+}
