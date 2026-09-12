@@ -6,6 +6,8 @@ import {
   invalidCitationIds,
   parseModelText,
 } from "./index";
+import { ARTIST_SOURCE_CATALOG } from "./artistSources";
+import { ARTIST_WITNESS_IDS, ensureArtistWitness, selectArtistWitness } from "./artistWitness";
 import { selectSources, SOURCE_CATALOG } from "./sources";
 
 describe("Workers AI response parsing", () => {
@@ -133,6 +135,43 @@ describe("public source registry", () => {
     for (const required of requiredAnchors) {
       expect(anchors.has(required), `Missing public source coverage for ${required}`).toBe(true);
     }
+  });
+});
+
+describe("artist witness registry", () => {
+  it("covers the permanent artist witnesses with unique public source IDs", () => {
+    const requiredAnchors = [
+      "bob dylan",
+      "david byrne",
+      "octavia e. butler",
+      "leonard cohen",
+      "frida kahlo",
+      "jean-michel basquiat",
+      "john lennon",
+      "yoko ono",
+    ];
+    const anchors = new Set(ARTIST_SOURCE_CATALOG.flatMap((source) => source.anchors || []).map((anchor) => anchor.toLowerCase()));
+    const allIds = [...SOURCE_CATALOG, ...ARTIST_SOURCE_CATALOG].map((source) => source.id);
+
+    expect(new Set(allIds).size).toBe(allIds.length);
+    for (const required of requiredAnchors) {
+      expect(anchors.has(required), `Missing artist witness coverage for ${required}`).toBe(true);
+    }
+  });
+
+  it("chooses a relevant artist when the question clearly matches one", () => {
+    expect(selectArtistWitness("How do hierarchy and survival change a community?").id).toBe("S32");
+    expect(selectArtistWitness("What does grief do to intimacy and faith?").id).toBe("S33");
+  });
+
+  it("guarantees one artist witness while preserving Bourdain's moderator sources", () => {
+    const question = "What do I owe someone after I change my mind?";
+    const sources = ensureArtistWitness(selectSources(question), question);
+
+    expect(sources.some((source) => ARTIST_WITNESS_IDS.has(source.id))).toBe(true);
+    expect(sources.map((source) => source.id)).toContain("S28");
+    expect(sources.map((source) => source.id)).toContain("S29");
+    expect(sources.length).toBeLessThanOrEqual(9);
   });
 });
 
