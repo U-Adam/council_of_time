@@ -1,0 +1,71 @@
+/* Council of Time brand system: emblem, watermark, and prompt emphasis. */
+.mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border: 0;
+  border-radius: 0;
+  background: url('/council-mark.svg') center / contain no-repeat;
+  color: transparent;
+  font-size: 0;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.34));
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -34px;
+  right: -118px;
+  width: 390px;
+  aspect-ratio: 1;
+  background: url('/council-mark.svg') center / contain no-repeat;
+  opacity: .032;
+  filter: grayscale(.1) saturate(.7);
+  pointer-events: none;
+}
+
+/* The home prompt should read as the primary action even before focus. */
+.hero .composer {
+  border-color: rgba(212, 168, 79, .92);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(212, 168, 79, .13), 0 18px 54px rgba(0,0,0,.2);
+}
+
+.hero .composer:focus-within {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 0 2px rgba(212, 168, 79, .16), 0 18px 54px rgba(0,0,0,.22);
+}
+
+.composer textarea:focus,
+.composer textarea:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
+@media (max-width: 640px) {
+  .mark {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .hero::before {
+    top: 4px;
+    right: -128px;
+    width: 330px;
+    opacity: .028;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero::before {
+    right: -155px;
+    width: 315px;
+  }
+}
