@@ -6,6 +6,7 @@ import "./styles.css";
 import "./attribution.css";
 import "./artist-witness.css";
 import "./about.css";
+import "./brand.css";
 
 const isAboutPage = window.location.pathname === "/about" || window.location.pathname.startsWith("/about/");
 
