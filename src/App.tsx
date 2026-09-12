@@ -1,22 +1,29 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowRight, ArrowUp, ExternalLink, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUp, ExternalLink, RotateCcw, ShieldCheck, Sparkles, X } from "lucide-react";
 import type { ChatMessage, CouncilResponse, CouncilSource } from "./types";
 
 const STARTERS = [
-  "Can love survive contempt?",
-  "What do I owe someone after I change my mind?",
-  "When does forgiveness become permission?",
   "Will there ever be another Winston Churchill?",
+  "Can love survive contempt?",
+  "When does loyalty become cowardice?",
 ];
 
 const REQUEST_TIMEOUT_MS = 75_000;
+
+const ATTRIBUTION_DEFINITIONS = {
+  Derived: "A present-day application that strongly follows from the source framework, even though the source did not address this exact case.",
+  Speculative: "A plausible but weaker, contested, historically remote, or interpretively ambitious extrapolation.",
+} as const;
+
+type AttributionKind = keyof typeof ATTRIBUTION_DEFINITIONS;
 
 type CouncilPayload = {
   messages: ChatMessage[];
   phase: "open" | "resume";
   pauseQuestion: string | null;
+  sourceIds?: string[];
 };
 
 type FailedAttempt = {
@@ -26,27 +33,35 @@ type FailedAttempt = {
   requestId?: string;
 };
 
-type VoiceRule = {
-  name: string;
-  terms: string[];
+type TablePlan = {
+  voices?: string[];
+  artistWitness?: string | null;
+  moderator?: string;
 };
 
-const VOICE_RULES: VoiceRule[] = [
-  { name: "bell hooks", terms: ["love", "relationship", "marriage", "contempt", "care", "intimacy", "domination", "patriarchy"] },
-  { name: "Søren Kierkegaard", terms: ["love", "choice", "faith", "anxiety", "despair", "commitment", "self", "relationship"] },
-  { name: "Simone de Beauvoir", terms: ["relationship", "love", "freedom", "ambiguity", "gender", "oppression", "reciprocity", "embodiment"] },
-  { name: "James Baldwin", terms: ["love", "hatred", "identity", "innocence", "race", "america", "self-deception", "responsibility"] },
-  { name: "Martha Nussbaum", terms: ["forgive", "forgiveness", "anger", "emotion", "dignity", "justice", "flourishing", "vulnerability"] },
-  { name: "Albert Camus", terms: ["meaning", "death", "mortality", "absurd", "rebellion", "solidarity", "limits", "grief"] },
-  { name: "Nāgārjuna", terms: ["suffering", "attachment", "identity", "self", "emptiness", "interdependence", "impermanence"] },
-  { name: "Hannah Arendt", terms: ["responsibility", "judgment", "politics", "public", "evil", "thoughtlessness", "plurality", "action"] },
-  { name: "Michel Foucault", terms: ["power", "discipline", "surveillance", "normalization", "institution", "knowledge", "sexuality"] },
-  { name: "Frantz Fanon", terms: ["colonial", "colonialism", "racism", "violence", "liberation", "dehumanization", "domination"] },
-  { name: "John Stuart Mill", terms: ["liberty", "freedom", "harm", "coercion", "utility", "individuality", "rights"] },
-  { name: "Immanuel Kant", terms: ["duty", "promise", "lying", "obligation", "respect", "dignity", "autonomy", "person"] },
-  { name: "Confucius", terms: ["family", "duty", "ritual", "respect", "character", "conduct", "relationship"] },
-  { name: "Plato", terms: ["justice", "virtue", "truth", "soul", "knowledge", "politics"] },
-];
+function AttributionBadge({ kind }: { kind: AttributionKind }) {
+  const [open, setOpen] = useState(false);
+  const definition = ATTRIBUTION_DEFINITIONS[kind];
+
+  return (
+    <span className={`attribution-wrap ${open ? "open" : ""}`}>
+      <button
+        type="button"
+        className={`attribution-badge ${kind.toLowerCase()}`}
+        aria-label={`${kind} attribution: ${definition}`}
+        aria-expanded={open}
+        title={definition}
+        onClick={() => setOpen((current) => !current)}
+        onBlur={() => setOpen(false)}
+      >
+        {kind}
+      </button>
+      <span className="attribution-tooltip" role="tooltip" aria-hidden={!open}>
+        {definition}
+      </span>
+    </span>
+  );
+}
 
 function SourceLinks({ sources }: { sources: CouncilSource[] }) {
   if (!sources.length) return null;
@@ -69,10 +84,12 @@ function SourceLinks({ sources }: { sources: CouncilSource[] }) {
 function renderAnswer(text: string, sources: CouncilSource[]) {
   const sourceById = new Map(sources.map((source) => [source.id, source]));
   const sourceByUrl = new Map(sources.map((source) => [source.url, source]));
-  const markdown = text.replace(/\[S(\d+)\]/g, (token, number) => {
-    const source = sourceById.get(`S${number}`);
-    return source ? `[\\[${number}\\]](${source.url})` : token;
-  });
+  const markdown = text
+    .replace(/\{\{(Derived|Speculative)\}\}/g, (_token, kind) => `\`${kind}\``)
+    .replace(/\[S(\d+)\]/g, (token, number) => {
+      const source = sourceById.get(`S${number}`);
+      return source ? `[\\[${number}\\]](${source.url})` : token;
+    });
 
   return (
     <ReactMarkdown
@@ -83,6 +100,16 @@ function renderAnswer(text: string, sources: CouncilSource[]) {
             <table>{children}</table>
           </div>
         ),
+        code: ({ children, className }) => {
+          const label = String(children).trim();
+          if (label === "Derived" || label === "Speculative") {
+            return <AttributionBadge kind={label} />;
+          }
+          if (label === "Artist Witness") {
+            return <span className="artist-witness-badge">Artist Witness</span>;
+          }
+          return <code className={className}>{children}</code>;
+        },
         a: ({ href, children }) => {
           const source = href ? sourceByUrl.get(href) : undefined;
           return (
@@ -126,22 +153,8 @@ function citedSourceIds(messages: ChatMessage[]) {
   return orderedIds;
 }
 
-function selectInvitees(question: string, max = 3) {
-  const normalized = question.toLowerCase();
-  return VOICE_RULES
-    .map((rule, index) => ({
-      ...rule,
-      index,
-      score: rule.terms.reduce((total, term) => total + (normalized.includes(term) ? 1 : 0), 0),
-    }))
-    .filter((rule) => rule.score > 0)
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .slice(0, max)
-    .map((rule) => rule.name);
-}
-
 function formatNames(names: string[]) {
-  if (names.length === 0) return "a few dissenting voices";
+  if (names.length === 0) return "the selected voices";
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
   return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
@@ -150,6 +163,7 @@ function formatNames(names: string[]) {
 export function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sources, setSources] = useState<CouncilSource[]>([]);
+  const [activeSourceIds, setActiveSourceIds] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [pauseQuestion, setPauseQuestion] = useState<string | null>(null);
@@ -157,7 +171,9 @@ export function App() {
   const [conveningLine, setConveningLine] = useState("Convening the table…");
   const [aboutOpen, setAboutOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const aboutDialogRef = useRef<HTMLDialogElement>(null);
   const progressTimers = useRef<number[]>([]);
+  const conveningSequence = useRef(0);
 
   const transcript = useMemo(() => messages.slice(-10), [messages]);
   const citedSources = useMemo(() => {
@@ -172,42 +188,81 @@ export function App() {
     progressTimers.current = [];
   }
 
-  function beginConvening(question: string, resuming: boolean) {
+  function stopConvening() {
     clearProgressTimers();
-    const invitees = selectInvitees(question);
-    const names = formatNames(invitees);
-    const stages = resuming
-      ? [
-          "Reopening the table…",
-          invitees.length ? `Bringing ${names} back into the argument…` : "Bringing the disagreement back to the table…",
-          "Testing your answer against the disagreement…",
-          "Bourdain is checking whether the fault line moved…",
-          "Working toward a finding…",
-        ]
-      : [
-          "Reading the question…",
-          invitees.length ? `Inviting ${names} to the table…` : "Inviting a few dissenting voices to the table…",
-          "Checking the source material…",
-          "The table is arguing…",
-          "Bourdain is looking for the fault line…",
-        ];
-    const delays = [0, 650, 2100, 4300, 7200];
+    conveningSequence.current += 1;
+  }
 
-    setConveningLine(stages[0]);
-    for (let index = 1; index < stages.length; index += 1) {
+  function beginConvening(payload: CouncilPayload, resuming: boolean) {
+    clearProgressTimers();
+    const sequence = ++conveningSequence.current;
+    const schedule = (line: string, delay: number) => {
       progressTimers.current.push(
-        window.setTimeout(() => setConveningLine(stages[index]), delays[index]),
+        window.setTimeout(() => {
+          if (conveningSequence.current === sequence) setConveningLine(line);
+        }, delay),
       );
+    };
+
+    if (resuming) {
+      setConveningLine("Reopening the table…");
+      schedule("Bringing the existing table back into the argument…", 700);
+      schedule("Testing your answer against the disagreement…", 2600);
+      schedule("Bourdain is checking whether the fault line moved…", 5200);
+      schedule("Working toward a finding…", 8200);
+      schedule("The table is still working toward the finding…", 12_000);
+      return;
     }
+
+    setConveningLine("Reading the question…");
+    let planResolved = false;
+    schedule("Selecting the voices that disagree most usefully…", 650);
+    schedule("Checking the source material…", 2800);
+    schedule("The table is arguing…", 5200);
+    schedule("Bourdain is looking for the fault line…", 8200);
+    schedule("Still at the table. This one needs a minute…", 12_000);
+
+    void fetch("/api/table-plan", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: payload.messages }),
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as TablePlan;
+      })
+      .then((plan) => {
+        planResolved = true;
+        if (!plan || conveningSequence.current !== sequence) return;
+        const voices = (plan.voices || []).slice(0, 3);
+        const voiceNames = formatNames(voices);
+        const line = plan.artistWitness
+          ? `Inviting ${voiceNames} — with ${plan.artistWitness} as Artist Witness…`
+          : `Inviting ${voiceNames} to the table…`;
+        setConveningLine(line);
+      })
+      .catch(() => {
+        planResolved = true;
+      });
+
     progressTimers.current.push(
-      window.setTimeout(
-        () => setConveningLine(resuming ? "The table is still working toward the finding…" : "Still at the table. This one needs a minute…"),
-        11_500,
-      ),
+      window.setTimeout(() => {
+        if (!planResolved && conveningSequence.current === sequence) {
+          setConveningLine("Selecting the voices that disagree most usefully…");
+        }
+      }, 900),
     );
   }
 
-  useEffect(() => () => clearProgressTimers(), []);
+  useEffect(() => () => stopConvening(), []);
+
+  useEffect(() => {
+    const dialog = aboutDialogRef.current;
+    if (!dialog) return;
+
+    if (aboutOpen && !dialog.open) dialog.showModal();
+    if (!aboutOpen && dialog.open) dialog.close();
+  }, [aboutOpen]);
 
   async function requestCouncil(payload: CouncilPayload, priorPause: string | null) {
     const controller = new AbortController();
@@ -234,6 +289,7 @@ export function App() {
       const data = body as CouncilResponse;
       setMessages((current) => [...current, { role: "assistant", content: data.answer }]);
       setSources((current) => mergeSources(current, data.sources || []));
+      setActiveSourceIds((data.sources || []).map((source) => source.id));
       setPauseQuestion(data.pause?.question || null);
       setFailedAttempt(null);
     } catch (error) {
@@ -250,7 +306,7 @@ export function App() {
       });
     } finally {
       window.clearTimeout(timeout);
-      clearProgressTimers();
+      stopConvening();
       setPending(false);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
@@ -276,6 +332,7 @@ export function App() {
       messages: nextMessages,
       phase: answeringPause ? "resume" : "open",
       pauseQuestion: priorPause,
+      sourceIds: answeringPause && activeSourceIds.length ? activeSourceIds : undefined,
     };
 
     setMessages((current) => [...current, { role: "user", content: trimmed }]);
@@ -284,7 +341,7 @@ export function App() {
     setPauseQuestion(null);
     setFailedAttempt(null);
     setAboutOpen(false);
-    beginConvening(trimmed, answeringPause);
+    beginConvening(payload, answeringPause);
 
     await requestCouncil(payload, priorPause);
   }
@@ -292,11 +349,10 @@ export function App() {
   async function retryFailed() {
     if (!failedAttempt || pending) return;
     const attempt = failedAttempt;
-    const lastUserMessage = [...attempt.payload.messages].reverse().find((message) => message.role === "user");
     setPending(true);
     setPauseQuestion(null);
     setFailedAttempt(null);
-    beginConvening(lastUserMessage?.content || "", attempt.payload.phase === "resume");
+    beginConvening(attempt.payload, attempt.payload.phase === "resume");
     await requestCouncil(attempt.payload, attempt.priorPause);
   }
 
@@ -306,9 +362,10 @@ export function App() {
   }
 
   function reset() {
-    clearProgressTimers();
+    stopConvening();
     setMessages([]);
     setSources([]);
+    setActiveSourceIds([]);
     setPauseQuestion(null);
     setFailedAttempt(null);
     setInput("");
@@ -336,7 +393,7 @@ export function App() {
         )}
       </header>
 
-      <section className={hasConversation ? "conversation" : "hero"}>
+      <section className={hasConversation ? "conversation" : "hero"} aria-busy={pending}>
         {!hasConversation && (
           <div className="hero-copy">
             <div className="eyebrow"><Sparkles size={14} /> A serious table for difficult questions</div>
@@ -348,7 +405,7 @@ export function App() {
         )}
 
         {hasConversation && (
-          <div className="thread" aria-live="polite">
+          <div className="thread" role="log" aria-live="polite" aria-relevant="additions text">
             {messages.map((message, index) => (
               <article key={index} className={`message ${message.role}`}>
                 <div className="message-label">{message.role === "user" ? "You" : "The Council"}</div>
@@ -358,7 +415,7 @@ export function App() {
               </article>
             ))}
             {pending && (
-              <article className="message assistant loading">
+              <article className="message assistant loading" role="status" aria-live="polite">
                 <div className="message-label">The Council</div>
                 <div className="thinking">
                   <span className="thinking-dots" aria-hidden="true"><i /><i /><i /></span>
@@ -381,15 +438,19 @@ export function App() {
         )}
 
         {pauseQuestion && !pending && !failedAttempt && (
-          <section className="pause-card">
+          <section className="pause-card" role="region" aria-labelledby="pause-question">
             <div className="section-kicker">Bourdain pauses the table</div>
-            <h2>{pauseQuestion}</h2>
+            <h2 id="pause-question">{pauseQuestion}</h2>
             <p>Your answer could materially change the Council's reasoning. The table will wait.</p>
           </section>
         )}
 
         <form className="composer" onSubmit={onSubmit}>
+          <label className="sr-only" htmlFor="council-question">
+            {pauseQuestion ? "Answer the fault-line question" : "Ask the Council"}
+          </label>
           <textarea
+            id="council-question"
             ref={inputRef}
             value={input}
             onChange={(event) => setInput(event.target.value)}
@@ -401,7 +462,6 @@ export function App() {
             }}
             placeholder={pauseQuestion ? "Answer the fault-line question…" : "What brings you to the table?"}
             rows={1}
-            aria-label="Your question"
           />
           <button type="submit" className="send-button" disabled={!input.trim() || pending} aria-label="Send">
             <ArrowUp size={20} />
@@ -410,56 +470,56 @@ export function App() {
 
         {!hasConversation && (
           <>
-            <div className="starters" aria-label="Example questions">
+            <nav className="starters" aria-label="Suggested questions">
               {STARTERS.map((starter) => (
                 <button key={starter} type="button" onClick={() => void submitQuestion(starter)}>
                   {starter}
                 </button>
               ))}
-            </div>
+            </nav>
 
-            <section className={`about-teaser${aboutOpen ? " open" : ""}`} aria-labelledby="about-teaser-title">
-              <div className="about-teaser-copy">
-                <div className="section-kicker">About the Council</div>
-                <h2 id="about-teaser-title">A table built to disagree.</h2>
-                <p>
-                  The Council of Time brings philosophers, artists, and witnesses into one moderated argument about the questions that matter. Bourdain runs the table. The goal is not consensus. It is clearer thinking.
-                </p>
-              </div>
-              <button
-                className="about-button"
-                type="button"
-                aria-expanded={aboutOpen}
-                aria-controls="about-council-details"
-                onClick={() => setAboutOpen((current) => !current)}
-              >
-                {aboutOpen ? "Close" : "About the Council"}
-                {!aboutOpen && <ArrowRight size={15} aria-hidden="true" />}
+            <div className="home-secondary-action">
+              <button className="about-button" type="button" onClick={() => setAboutOpen(true)}>
+                About the Council <ArrowRight size={15} aria-hidden="true" />
               </button>
-
-              {aboutOpen && (
-                <div id="about-council-details" className="about-details">
-                  <p>
-                    Questions are seated rather than handed to a single authority. Bourdain moderates a small table of relevant voices chosen for productive disagreement, including at least one Artist Witness.
-                  </p>
-                  <p>
-                    Claims are sourced. Applications are distinguished as Direct, Derived, or Speculative. When one unresolved fact could materially change the reasoning, the table stops and asks before reaching a finding.
-                  </p>
-                  <p>
-                    There is no party line. Past findings are precedent, never doctrine. The point is to make the argument stronger—and your thinking clearer.
-                  </p>
-                </div>
-              )}
-            </section>
+            </div>
           </>
         )}
 
         {hasConversation && <SourceLinks sources={citedSources} />}
 
         <div className="privacy-note">
-          <ShieldCheck size={14} /> This build stores no conversation history on the Council server.
+          <ShieldCheck size={14} /> The app does not keep a server-side conversation history between sessions.
         </div>
       </section>
+
+      <dialog
+        ref={aboutDialogRef}
+        className="about-dialog"
+        aria-labelledby="about-council-title"
+        onClose={() => setAboutOpen(false)}
+        onCancel={() => setAboutOpen(false)}
+      >
+        <div className="about-dialog-card">
+          <button className="about-close" type="button" aria-label="Close About the Council" onClick={() => setAboutOpen(false)}>
+            <X size={18} aria-hidden="true" />
+          </button>
+          <div className="section-kicker">About the Council</div>
+          <h2 id="about-council-title">A table built to disagree.</h2>
+          <p>
+            The Council of Time is a deliberative framework for difficult questions. Anthony Bourdain moderates as a documented witness—not an impersonation—and selects voices for useful disagreement rather than easy consensus.
+          </p>
+          <p>
+            Each substantive table draws from relevant Council members and includes at least one Artist Witness. Claims about thinkers are grounded in sources; present-day applications are marked Derived or Speculative when the evidence requires that distance.
+          </p>
+          <p>
+            When one unresolved fact could materially change the reasoning, Bourdain pauses the table before synthesis. The point is not to produce a party line. It is to make the argument—and the thinking behind it—stronger.
+          </p>
+          <button className="about-return" type="button" onClick={() => setAboutOpen(false)}>
+            Return to the table
+          </button>
+        </div>
+      </dialog>
     </main>
   );
 }
