@@ -19,7 +19,6 @@ const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8000;
 const DEFAULT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 const FALLBACK_MODELS = ["@cf/zai-org/glm-4.7-flash", "@cf/meta/llama-3.1-8b-instruct-fast"];
-const SMOKE_KEY = "cot-smoke-5d8f3a";
 
 function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -71,6 +70,13 @@ function parseModelText(result: unknown): string {
   return "";
 }
 
+function finishReason(result: unknown): string | null {
+  if (!result || typeof result !== "object") return null;
+  const record = result as Record<string, any>;
+  const reason = Array.isArray(record.choices) ? record.choices[0]?.finish_reason : null;
+  return typeof reason === "string" ? reason : null;
+}
+
 function extractPause(answer: string) {
   const match = answer.match(/(?:^|\n)PAUSE_QUESTION:\s*(.+?)\s*$/s);
   if (!match) return { answer: answer.trim(), pause: null };
@@ -94,14 +100,6 @@ function errorDetail(error: unknown) {
     return JSON.stringify(error);
   } catch {
     return String(error);
-  }
-}
-
-function safePreview(value: unknown) {
-  try {
-    return JSON.stringify(value).slice(0, 1200);
-  } catch {
-    return String(value).slice(0, 1200);
   }
 }
 
@@ -140,6 +138,7 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
         requestId,
         event: "council_model_success",
         model,
+        finishReason: finishReason(result),
         latencyMs: Date.now() - startedAt,
         fallbackDepth: failures.length,
       }));
@@ -159,109 +158,6 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
   }
 
   throw Object.assign(new Error("All Council models failed."), { failures });
-}
-
-async function handleModelSmoke(env: Env) {
-  const models = uniqueModels(env.COUNCIL_MODEL);
-  const results: Array<Record<string, unknown>> = [];
-
-  for (const model of models) {
-    const startedAt = Date.now();
-    try {
-      const result = await env.AI.run(model as Parameters<Ai["run"]>[0], {
-        messages: [
-          { role: "system", content: "Reply with exactly OK." },
-          { role: "user", content: "Health check." },
-        ],
-        ...generationOptions(model, 64, 0),
-      } as any);
-      const text = parseModelText(result);
-      const record = result && typeof result === "object" ? (result as Record<string, unknown>) : null;
-      results.push({
-        model,
-        ok: Boolean(text),
-        text: text.slice(0, 80),
-        resultType: Array.isArray(result) ? "array" : typeof result,
-        keys: record ? Object.keys(record) : [],
-        preview: safePreview(result),
-        latencyMs: Date.now() - startedAt,
-      });
-    } catch (error) {
-      results.push({
-        model,
-        ok: false,
-        error: errorDetail(error).slice(0, 500),
-        latencyMs: Date.now() - startedAt,
-      });
-    }
-  }
-
-  return json({ ok: results.every((result) => result.ok === true), results });
-}
-
-async function handleCouncilSmoke(env: Env) {
-  const userQuestion = "Can love survive contempt? The answer may depend on whether the contempt is episodic or chronic. Pause at that fault line before giving a Council Finding.";
-  const sources = selectSources(userQuestion);
-  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
-  const requestId = `smoke-${crypto.randomUUID().slice(0, 6)}`;
-
-  try {
-    const { raw, model, failures } = await runCouncilModel(
-      env,
-      uniqueModels(env.COUNCIL_MODEL),
-      [{ role: "user", content: userQuestion }],
-      systemPrompt,
-      requestId,
-    );
-    const parsed = extractPause(raw);
-    return json({
-      ok: Boolean(parsed.answer),
-      model,
-      recoveredWithFallback: failures.length > 0,
-      answerPreview: parsed.answer.slice(0, 1600),
-      pause: parsed.pause,
-      sourceIds: sources.map((source) => source.id),
-    });
-  } catch (error) {
-    return json({ ok: false, error: errorDetail(error) }, { status: 503 });
-  }
-}
-
-async function handleResumeSmoke(env: Env) {
-  const originalQuestion = "Can love survive contempt?";
-  const priorPause = "Is the contempt in question a reaction to specific, identifiable behaviors or failures of the partner, or is it a generalized, pervasive disdain for who the partner is at their core?";
-  const userAnswer = "It is chronic, and the contempt is described as justified.";
-  const messages: Message[] = [
-    { role: "user", content: originalQuestion },
-    { role: "assistant", content: `The table paused before synthesis with this question for the user: ${priorPause}` },
-    { role: "user", content: userAnswer },
-  ];
-  const sources = selectSources(`${originalQuestion}\n${userAnswer}`);
-  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${continuationInstruction("resume", priorPause)}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
-  const requestId = `resume-${crypto.randomUUID().slice(0, 6)}`;
-
-  try {
-    const { raw, model, failures } = await runCouncilModel(
-      env,
-      uniqueModels(env.COUNCIL_MODEL),
-      messages,
-      systemPrompt,
-      requestId,
-    );
-    const parsed = extractPause(raw);
-    return json({
-      ok: Boolean(parsed.answer),
-      model,
-      recoveredWithFallback: failures.length > 0,
-      answerPreview: parsed.answer.slice(0, 2000),
-      pause: parsed.pause,
-      hasCouncilFinding: /council finding/i.test(parsed.answer),
-      repeatedPriorQuestion: parsed.pause?.question?.trim() === priorPause.trim(),
-      sourceIds: sources.map((source) => source.id),
-    });
-  } catch (error) {
-    return json({ ok: false, error: errorDetail(error) }, { status: 503 });
-  }
 }
 
 async function handleCouncil(request: Request, env: Env) {
@@ -331,14 +227,6 @@ export default {
         primaryModel: env.COUNCIL_MODEL || DEFAULT_MODEL,
         fallbackModels: FALLBACK_MODELS,
       });
-    }
-
-    if (url.pathname === "/api/_smoke" && request.method === "GET") {
-      if (url.searchParams.get("key") !== SMOKE_KEY) return json({ error: "Not found" }, { status: 404 });
-      const mode = url.searchParams.get("mode");
-      if (mode === "council") return handleCouncilSmoke(env);
-      if (mode === "resume") return handleResumeSmoke(env);
-      return handleModelSmoke(env);
     }
 
     if (url.pathname === "/api/council" && request.method === "POST") {
