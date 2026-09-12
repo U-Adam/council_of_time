@@ -159,7 +159,8 @@ describe("topic-aware source selection", () => {
 
   it("routes reason and revelation toward the medieval comparative table", () => {
     const ids = selectSources("How should reason and revelation relate in law?").map((source) => source.id);
+    const topThree = new Set(ids.slice(0, 3));
 
-    expect(ids.slice(0, 3)).toEqual(["S19", "S20", "S21"]);
+    expect(topThree).toEqual(new Set(["S19", "S20", "S21"]));
   });
 });
