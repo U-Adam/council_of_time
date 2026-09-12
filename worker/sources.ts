@@ -1,3 +1,5 @@
+import { EXTENDED_SOURCE_CATALOG } from "./extendedSources";
+
 export type PublicSource = {
   id: string;
   title: string;
@@ -8,7 +10,7 @@ export type PublicSource = {
   note: string;
 };
 
-export const SOURCE_CATALOG: PublicSource[] = [
+const CORE_SOURCE_CATALOG: PublicSource[] = [
   {
     id: "S1",
     title: "Plato — public-domain works (Project Gutenberg)",
@@ -173,47 +175,62 @@ export const SOURCE_CATALOG: PublicSource[] = [
   },
 ];
 
+export const SOURCE_CATALOG: PublicSource[] = [...CORE_SOURCE_CATALOG, ...EXTENDED_SOURCE_CATALOG];
+
 const TOPIC_BUNDLES: Array<{ keywords: string[]; ids: string[] }> = [
   {
     keywords: ["love", "marriage", "relationship", "contempt", "betrayal", "forgive", "forgiveness", "repair", "intimacy", "partner", "family"],
-    ids: ["S13", "S12", "S10", "S14", "S17", "S3", "S6"],
+    ids: ["S13", "S12", "S10", "S14", "S23", "S27", "S17", "S3", "S6"],
   },
   {
-    keywords: ["power", "coercion", "institution", "surveillance", "prison", "domination", "oppression", "colonial", "racism"],
-    ids: ["S15", "S16", "S9", "S17", "S8", "S10"],
+    keywords: ["power", "coercion", "institution", "surveillance", "prison", "domination", "oppression", "colonial", "racism", "abolition"],
+    ids: ["S25", "S15", "S16", "S22", "S23", "S26", "S9", "S17", "S8", "S10"],
   },
   {
-    keywords: ["justice", "politics", "democracy", "state", "law", "rights", "liberty", "freedom", "public"],
-    ids: ["S2", "S6", "S8", "S9", "S15", "S16", "S17"],
+    keywords: ["justice", "politics", "democracy", "state", "law", "rights", "liberty", "freedom", "public", "citizenship"],
+    ids: ["S22", "S27", "S19", "S20", "S21", "S25", "S2", "S6", "S8", "S9", "S15", "S17"],
   },
   {
-    keywords: ["meaning", "death", "mortality", "grief", "despair", "absurd", "faith", "suffering"],
-    ids: ["S11", "S12", "S18", "S14", "S17"],
+    keywords: ["meaning", "death", "mortality", "grief", "despair", "absurd", "faith", "suffering", "anxiety", "insecurity"],
+    ids: ["S11", "S12", "S24", "S18", "S14", "S20", "S17"],
   },
   {
-    keywords: ["identity", "self", "ego", "attachment", "gender", "embodiment", "recognition"],
-    ids: ["S18", "S10", "S14", "S16", "S12", "S15"],
+    keywords: ["identity", "self", "ego", "attachment", "gender", "embodiment", "recognition", "difference"],
+    ids: ["S18", "S24", "S26", "S10", "S22", "S23", "S14", "S16", "S12", "S15"],
   },
   {
-    keywords: ["duty", "promise", "lying", "obligation", "responsibility", "respect", "dignity"],
-    ids: ["S5", "S6", "S9", "S17", "S3"],
+    keywords: ["duty", "promise", "lying", "obligation", "responsibility", "respect", "dignity", "culpability", "mercy", "repentance"],
+    ids: ["S5", "S6", "S19", "S20", "S9", "S17", "S3"],
+  },
+  {
+    keywords: ["religion", "faith", "revelation", "theology", "reason", "scripture", "interpretation"],
+    ids: ["S19", "S20", "S21", "S12", "S3"],
+  },
+  {
+    keywords: ["race", "racism", "black", "america", "democracy", "segregation", "reconstruction"],
+    ids: ["S22", "S14", "S23", "S25", "S27", "S16", "S9"],
+  },
+  {
+    keywords: ["work", "labor", "restaurant", "kitchen", "hospitality", "class", "travel", "food", "culture", "craft"],
+    ids: ["S28", "S29", "S15", "S27", "S14"],
   },
 ];
 
-const GENERAL_IDS = ["S6", "S9", "S11", "S12", "S17"];
+const GENERAL_IDS = ["S6", "S9", "S11", "S12", "S17", "S19", "S22"];
+const MODERATOR_IDS = ["S28", "S29"];
 
 function includesAny(text: string, values: string[]) {
   return values.some((value) => text.includes(value));
 }
 
-export function selectSources(text: string, max = 7): PublicSource[] {
+export function selectSources(text: string, max = 9): PublicSource[] {
   const normalized = text.toLowerCase();
   const bundleScores = new Map<string, number>();
 
   for (const bundle of TOPIC_BUNDLES) {
     if (!includesAny(normalized, bundle.keywords)) continue;
     bundle.ids.forEach((id, index) => {
-      bundleScores.set(id, (bundleScores.get(id) || 0) + Math.max(1, 7 - index));
+      bundleScores.set(id, (bundleScores.get(id) || 0) + Math.max(1, 10 - index));
     });
   }
 
@@ -225,9 +242,13 @@ export function selectSources(text: string, max = 7): PublicSource[] {
     return { source, score: explicit + tagScore + bundleScore + primaryBonus, catalogIndex };
   }).sort((a, b) => b.score - a.score || a.catalogIndex - b.catalogIndex);
 
-  const matched = scored.filter((item) => item.score > 0).map((item) => item.source);
+  const matched = scored
+    .filter((item) => item.score > 0 && !MODERATOR_IDS.includes(item.source.id))
+    .map((item) => item.source);
   const general = GENERAL_IDS.map((id) => SOURCE_CATALOG.find((source) => source.id === id)).filter(Boolean) as PublicSource[];
-  const combined = [...matched, ...general];
+  const topicLimit = Math.max(1, max - MODERATOR_IDS.length);
+  const topicSources = [...new Map([...matched, ...general].map((source) => [source.id, source])).values()].slice(0, topicLimit);
+  const moderatorSources = MODERATOR_IDS.map((id) => SOURCE_CATALOG.find((source) => source.id === id)).filter(Boolean) as PublicSource[];
 
-  return [...new Map(combined.map((source) => [source.id, source])).values()].slice(0, max);
+  return [...topicSources, ...moderatorSources].slice(0, max);
 }
