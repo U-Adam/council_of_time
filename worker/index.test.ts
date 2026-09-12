@@ -93,8 +93,7 @@ describe("topic-aware source selection", () => {
   it("routes relationship contempt toward relationship-relevant voices", () => {
     const ids = selectSources("Can love survive chronic contempt in a marriage?").map((source) => source.id);
 
-    expect(ids.slice(0, 5)).toEqual(expect.arrayContaining(["S13", "S12", "S10", "S14"]));
-    expect(ids.indexOf("S13")).toBeLessThan(ids.indexOf("S6"));
+    expect(ids.slice(0, 4)).toEqual(["S13", "S12", "S10", "S14"]);
   });
 
   it("prioritizes an explicitly named thinker", () => {
