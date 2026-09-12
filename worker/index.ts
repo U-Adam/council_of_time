@@ -1,6 +1,6 @@
 import { COUNCIL_SYSTEM_PROMPT, formatSourceContext } from "./prompt";
 import { ARTIST_SOURCE_CATALOG } from "./artistSources";
-import { ensureArtistWitness } from "./artistWitness";
+import { ARTIST_WITNESS_IDS, ensureArtistWitness } from "./artistWitness";
 import { selectSources, SOURCE_CATALOG, type PublicSource } from "./sources";
 import { createTablePlan } from "./tablePlan";
 
@@ -102,6 +102,31 @@ export function extractPause(answer: string) {
 export function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
   if (phase !== "resume" || typeof pauseQuestion !== "string" || !pauseQuestion.trim()) return "";
   return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Keep the existing table and source roster unless the user's answer itself makes one of those voices irrelevant. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
+}
+
+export function ensureArtistWitnessBadge(answer: string, sources: PublicSource[]) {
+  if (answer.includes("`Artist Witness`")) return answer;
+
+  const artistSource = sources.find((source) => ARTIST_WITNESS_IDS.has(source.id));
+  if (!artistSource) return answer;
+  const artistName = artistSource.title.split(" — ")[0]?.trim();
+  if (!artistName || !answer.includes(artistName)) return answer;
+
+  const lines = answer.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line.trimStart().startsWith("|") || !line.includes(artistName)) continue;
+
+    const boldName = `**${artistName}**`;
+    if (line.includes(boldName)) {
+      lines[index] = line.replace(boldName, `${boldName} \`Artist Witness\``);
+    } else {
+      lines[index] = line.replace(artistName, `${artistName} \`Artist Witness\``);
+    }
+    return lines.join("\n");
+  }
+
+  return answer;
 }
 
 function uniqueModels(primary?: string) {
@@ -245,7 +270,8 @@ async function handleCouncil(request: Request, env: Env) {
       allowedSourceIds,
       requestId,
     );
-    const parsed = extractPause(raw);
+    const normalizedRaw = ensureArtistWitnessBadge(raw, sources);
+    const parsed = extractPause(normalizedRaw);
 
     return json({
       ...parsed,
