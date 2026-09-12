@@ -8,6 +8,7 @@ import "./artist-witness.css";
 import "./about.css";
 import "./brand.css";
 import "./mission.css";
+import "./site-theme.css";
 
 const isAboutPage = window.location.pathname === "/about" || window.location.pathname.startsWith("/about/");
 
