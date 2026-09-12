@@ -17,6 +17,7 @@ interface Env {
   AI: Ai;
   ASSETS: Fetcher;
   COUNCIL_MODEL?: string;
+  CF_VERSION_METADATA?: WorkerVersionMetadata;
 }
 
 const MAX_MESSAGES = 12;
@@ -110,19 +111,22 @@ export function ensureArtistWitnessBadge(answer: string, sources: PublicSource[]
   const artistSource = sources.find((source) => ARTIST_WITNESS_IDS.has(source.id));
   if (!artistSource) return answer;
   const artistName = artistSource.title.split(" — ")[0]?.trim();
-  if (!artistName || !answer.includes(artistName)) return answer;
+  if (!artistName) return answer;
 
   const lines = answer.split("\n");
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    if (!line.trimStart().startsWith("|") || !line.includes(artistName)) continue;
+    if (!line.trimStart().startsWith("|")) continue;
+    const cells = line.split("|");
+    if (cells.length < 4 || !cells[1]?.includes(artistName)) continue;
 
     const boldName = `**${artistName}**`;
-    if (line.includes(boldName)) {
-      lines[index] = line.replace(boldName, `${boldName} \`Artist Witness\``);
+    if (cells[1].includes(boldName)) {
+      cells[1] = cells[1].replace(boldName, `${boldName} \`Artist Witness\``);
     } else {
-      lines[index] = line.replace(artistName, `${artistName} \`Artist Witness\``);
+      cells[1] = cells[1].replace(artistName, `${artistName} \`Artist Witness\``);
     }
+    lines[index] = cells.join("|");
     return lines.join("\n");
   }
 
@@ -312,6 +316,13 @@ export default {
         aiBinding: Boolean(env.AI),
         primaryModel: env.COUNCIL_MODEL || DEFAULT_MODEL,
         fallbackModels: FALLBACK_MODELS,
+        workerVersion: env.CF_VERSION_METADATA
+          ? {
+              id: env.CF_VERSION_METADATA.id,
+              tag: env.CF_VERSION_METADATA.tag,
+              timestamp: env.CF_VERSION_METADATA.timestamp,
+            }
+          : null,
       });
     }
 
