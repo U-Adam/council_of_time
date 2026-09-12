@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, ExternalLink, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUp, ExternalLink, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
 import type { ChatMessage, CouncilResponse, CouncilSource } from "./types";
 
 const STARTERS = [
@@ -155,6 +155,7 @@ export function App() {
   const [pauseQuestion, setPauseQuestion] = useState<string | null>(null);
   const [failedAttempt, setFailedAttempt] = useState<FailedAttempt | null>(null);
   const [conveningLine, setConveningLine] = useState("Convening the table…");
+  const [aboutOpen, setAboutOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const progressTimers = useRef<number[]>([]);
 
@@ -282,6 +283,7 @@ export function App() {
     setPending(true);
     setPauseQuestion(null);
     setFailedAttempt(null);
+    setAboutOpen(false);
     beginConvening(trimmed, answeringPause);
 
     await requestCouncil(payload, priorPause);
@@ -310,6 +312,7 @@ export function App() {
     setPauseQuestion(null);
     setFailedAttempt(null);
     setInput("");
+    setAboutOpen(false);
     setConveningLine("Convening the table…");
     requestAnimationFrame(() => inputRef.current?.focus());
   }
@@ -406,13 +409,49 @@ export function App() {
         </form>
 
         {!hasConversation && (
-          <div className="starters" aria-label="Example questions">
-            {STARTERS.map((starter) => (
-              <button key={starter} type="button" onClick={() => void submitQuestion(starter)}>
-                {starter}
+          <>
+            <div className="starters" aria-label="Example questions">
+              {STARTERS.map((starter) => (
+                <button key={starter} type="button" onClick={() => void submitQuestion(starter)}>
+                  {starter}
+                </button>
+              ))}
+            </div>
+
+            <section className={`about-teaser${aboutOpen ? " open" : ""}`} aria-labelledby="about-teaser-title">
+              <div className="about-teaser-copy">
+                <div className="section-kicker">About the Council</div>
+                <h2 id="about-teaser-title">A table built to disagree.</h2>
+                <p>
+                  The Council of Time brings philosophers, artists, and witnesses into one moderated argument about the questions that matter. Bourdain runs the table. The goal is not consensus. It is clearer thinking.
+                </p>
+              </div>
+              <button
+                className="about-button"
+                type="button"
+                aria-expanded={aboutOpen}
+                aria-controls="about-council-details"
+                onClick={() => setAboutOpen((current) => !current)}
+              >
+                {aboutOpen ? "Close" : "About the Council"}
+                {!aboutOpen && <ArrowRight size={15} aria-hidden="true" />}
               </button>
-            ))}
-          </div>
+
+              {aboutOpen && (
+                <div id="about-council-details" className="about-details">
+                  <p>
+                    Questions are seated rather than handed to a single authority. Bourdain moderates a small table of relevant voices chosen for productive disagreement, including at least one Artist Witness.
+                  </p>
+                  <p>
+                    Claims are sourced. Applications are distinguished as Direct, Derived, or Speculative. When one unresolved fact could materially change the reasoning, the table stops and asks before reaching a finding.
+                  </p>
+                  <p>
+                    There is no party line. Past findings are precedent, never doctrine. The point is to make the argument stronger—and your thinking clearer.
+                  </p>
+                </div>
+              )}
+            </section>
+          </>
         )}
 
         {hasConversation && <SourceLinks sources={citedSources} />}
