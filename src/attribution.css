@@ -1,3 +1,6 @@
+.inline-cite::before { content: "["; }
+.inline-cite::after { content: "]"; }
+
 .attribution-wrap {
   position: relative;
   display: inline-flex;
