@@ -4,6 +4,7 @@ import { App } from "./App";
 import "./styles.css";
 import "./attribution.css";
 import "./artist-witness.css";
+import "./about.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
