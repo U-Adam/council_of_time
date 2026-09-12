@@ -97,6 +97,14 @@ function errorDetail(error: unknown) {
   }
 }
 
+function safePreview(value: unknown) {
+  try {
+    return JSON.stringify(value).slice(0, 1200);
+  } catch {
+    return String(value).slice(0, 1200);
+  }
+}
+
 async function runCouncilModel(env: Env, models: string[], messages: Message[], systemPrompt: string, requestId: string) {
   const failures: Array<{ model: string; detail: string }> = [];
 
@@ -153,10 +161,14 @@ async function handleSmoke(env: Env) {
         temperature: 0,
       } as any);
       const text = parseModelText(result);
+      const record = result && typeof result === "object" ? (result as Record<string, unknown>) : null;
       results.push({
         model,
         ok: Boolean(text),
         text: text.slice(0, 40),
+        resultType: Array.isArray(result) ? "array" : typeof result,
+        keys: record ? Object.keys(record) : [],
+        preview: safePreview(result),
         latencyMs: Date.now() - startedAt,
       });
     } catch (error) {
