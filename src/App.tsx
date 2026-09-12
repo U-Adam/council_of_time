@@ -88,7 +88,7 @@ function renderAnswer(text: string, sources: CouncilSource[]) {
     .replace(/\{\{(Derived|Speculative)\}\}/g, (_token, kind) => `\`${kind}\``)
     .replace(/\[S(\d+)\]/g, (token, number) => {
       const source = sourceById.get(`S${number}`);
-      return source ? `[\\[${number}\\]](${source.url})` : token;
+      return source ? `[${number}](${source.url})` : token;
     });
 
   return (
@@ -469,13 +469,13 @@ export function App() {
 
         {!hasConversation && (
           <>
-            <nav className="starters" aria-label="Suggested questions">
+            <div className="starters" role="group" aria-label="Suggested questions">
               {STARTERS.map((starter) => (
                 <button key={starter} type="button" onClick={() => void submitQuestion(starter)}>
                   {starter}
                 </button>
               ))}
-            </nav>
+            </div>
 
             <div className="home-secondary-action">
               <button className="about-button" type="button" onClick={() => setAboutOpen(true)}>
@@ -498,6 +498,9 @@ export function App() {
         aria-labelledby="about-council-title"
         onClose={() => setAboutOpen(false)}
         onCancel={() => setAboutOpen(false)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setAboutOpen(false);
+        }}
       >
         <div className="about-dialog-card">
           <button className="about-close" type="button" aria-label="Close About the Council" onClick={() => setAboutOpen(false)}>
