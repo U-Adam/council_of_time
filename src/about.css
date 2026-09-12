@@ -1,93 +1,141 @@
-.about-teaser {
-  margin-top: 28px;
-  padding: 20px;
-  border: 1px solid rgba(244, 239, 228, 0.12);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(33, 30, 25, 0.82), rgba(25, 23, 19, 0.72));
-}
-
-.about-teaser-copy {
-  max-width: 700px;
-}
-
-.about-teaser h2 {
-  margin: 8px 0 8px;
-  color: var(--ink);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 24px;
-  font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
-.about-teaser-copy > p {
-  margin: 0;
-  max-width: 690px;
-  color: #c7beb2;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 16px;
-  line-height: 1.58;
+.home-secondary-action {
+  margin-top: 14px;
 }
 
 .about-button {
-  margin-top: 15px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid rgba(212, 168, 79, 0.42);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 9px 13px;
-  background: rgba(212, 168, 79, 0.08);
-  color: #ecd39c;
+  background: transparent;
+  color: #bdb4a9;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: border-color .14s ease, color .14s ease, background .14s ease;
+}
+
+.about-button:hover {
+  border-color: rgba(212, 168, 79, .44);
+  background: rgba(212, 168, 79, .06);
+  color: var(--ink);
+}
+
+.about-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(760px, calc(100dvh - 40px));
+  padding: 0;
+  overflow: auto;
+  border: 1px solid rgba(244, 239, 228, .16);
+  border-radius: 20px;
+  background: #191713;
+  color: var(--ink);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, .58);
+}
+
+.about-dialog::backdrop {
+  background: rgba(5, 5, 4, .72);
+  backdrop-filter: blur(4px);
+}
+
+.about-dialog-card {
+  position: relative;
+  padding: 28px;
+}
+
+.about-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(244, 239, 228, .025);
+  color: var(--muted);
   cursor: pointer;
 }
 
-.about-button:hover,
-.about-button:focus-visible {
-  border-color: rgba(212, 168, 79, 0.72);
-  background: rgba(212, 168, 79, 0.13);
-  color: #f3ddb0;
-  outline: none;
+.about-close:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
 }
 
-.about-details {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(244, 239, 228, 0.1);
-  max-width: 700px;
+.about-dialog .section-kicker {
+  padding-right: 52px;
 }
 
-.about-details p {
-  margin: 0 0 10px;
-  color: #aaa298;
-  font-size: 13px;
-  line-height: 1.6;
+.about-dialog h2 {
+  max-width: 430px;
+  margin: 12px 0 18px;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -.025em;
 }
 
-.about-details p:last-child {
+.about-dialog p {
+  margin: 0 0 14px;
+  color: #c3baae;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.about-dialog p:last-of-type {
   margin-bottom: 0;
 }
 
+.about-return {
+  min-height: 44px;
+  margin-top: 22px;
+  padding: 9px 14px;
+  border: 1px solid rgba(212, 168, 79, .46);
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: #f0dfb9;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.about-return:hover {
+  border-color: rgba(212, 168, 79, .72);
+  background: rgba(212, 168, 79, .16);
+}
+
 @media (max-width: 640px) {
-  .about-teaser {
-    margin-top: 22px;
-    padding: 17px;
-    border-radius: 14px;
+  .home-secondary-action { margin-top: 12px; }
+
+  .about-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - max(20px, env(safe-area-inset-top, 0px)) - max(10px, env(safe-area-inset-bottom, 0px)));
+    margin: auto 10px max(10px, env(safe-area-inset-bottom, 0px));
+    border-radius: 18px;
   }
 
-  .about-teaser h2 {
-    font-size: 21px;
+  .about-dialog-card {
+    padding: 24px 20px 22px;
   }
 
-  .about-teaser-copy > p {
-    font-size: 15px;
-    line-height: 1.55;
+  .about-dialog h2 {
+    margin-top: 11px;
+    font-size: 28px;
   }
 
-  .about-button {
-    min-height: 40px;
+  .about-dialog p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .about-return {
+    width: 100%;
   }
 }
