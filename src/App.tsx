@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ArrowUp, ExternalLink, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
 import type { ChatMessage, CouncilResponse, CouncilSource } from "./types";
@@ -23,6 +23,28 @@ type FailedAttempt = {
   message: string;
   requestId?: string;
 };
+
+type VoiceRule = {
+  name: string;
+  terms: string[];
+};
+
+const VOICE_RULES: VoiceRule[] = [
+  { name: "bell hooks", terms: ["love", "relationship", "marriage", "contempt", "care", "intimacy", "domination", "patriarchy"] },
+  { name: "Søren Kierkegaard", terms: ["love", "choice", "faith", "anxiety", "despair", "commitment", "self", "relationship"] },
+  { name: "Simone de Beauvoir", terms: ["relationship", "love", "freedom", "ambiguity", "gender", "oppression", "reciprocity", "embodiment"] },
+  { name: "James Baldwin", terms: ["love", "hatred", "identity", "innocence", "race", "america", "self-deception", "responsibility"] },
+  { name: "Martha Nussbaum", terms: ["forgive", "forgiveness", "anger", "emotion", "dignity", "justice", "flourishing", "vulnerability"] },
+  { name: "Albert Camus", terms: ["meaning", "death", "mortality", "absurd", "rebellion", "solidarity", "limits", "grief"] },
+  { name: "Nāgārjuna", terms: ["suffering", "attachment", "identity", "self", "emptiness", "interdependence", "impermanence"] },
+  { name: "Hannah Arendt", terms: ["responsibility", "judgment", "politics", "public", "evil", "thoughtlessness", "plurality", "action"] },
+  { name: "Michel Foucault", terms: ["power", "discipline", "surveillance", "normalization", "institution", "knowledge", "sexuality"] },
+  { name: "Frantz Fanon", terms: ["colonial", "colonialism", "racism", "violence", "liberation", "dehumanization", "domination"] },
+  { name: "John Stuart Mill", terms: ["liberty", "freedom", "harm", "coercion", "utility", "individuality", "rights"] },
+  { name: "Immanuel Kant", terms: ["duty", "promise", "lying", "obligation", "respect", "dignity", "autonomy", "person"] },
+  { name: "Confucius", terms: ["family", "duty", "ritual", "respect", "character", "conduct", "relationship"] },
+  { name: "Plato", terms: ["justice", "virtue", "truth", "soul", "knowledge", "politics"] },
+];
 
 function SourceLinks({ sources }: { sources: CouncilSource[] }) {
   if (!sources.length) return null;
@@ -96,6 +118,27 @@ function citedSourceIds(messages: ChatMessage[]) {
   return orderedIds;
 }
 
+function selectInvitees(question: string, max = 3) {
+  const normalized = question.toLowerCase();
+  return VOICE_RULES
+    .map((rule, index) => ({
+      ...rule,
+      index,
+      score: rule.terms.reduce((total, term) => total + (normalized.includes(term) ? 1 : 0), 0),
+    }))
+    .filter((rule) => rule.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, max)
+    .map((rule) => rule.name);
+}
+
+function formatNames(names: string[]) {
+  if (names.length === 0) return "a few dissenting voices";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
 export function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sources, setSources] = useState<CouncilSource[]>([]);
@@ -103,7 +146,9 @@ export function App() {
   const [pending, setPending] = useState(false);
   const [pauseQuestion, setPauseQuestion] = useState<string | null>(null);
   const [failedAttempt, setFailedAttempt] = useState<FailedAttempt | null>(null);
+  const [conveningLine, setConveningLine] = useState("Convening the table…");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const progressTimers = useRef<number[]>([]);
 
   const transcript = useMemo(() => messages.slice(-10), [messages]);
   const citedSources = useMemo(() => {
@@ -112,6 +157,48 @@ export function App() {
       .map((id) => sourceById.get(id))
       .filter((source): source is CouncilSource => Boolean(source));
   }, [messages, sources]);
+
+  function clearProgressTimers() {
+    progressTimers.current.forEach((timer) => window.clearTimeout(timer));
+    progressTimers.current = [];
+  }
+
+  function beginConvening(question: string, resuming: boolean) {
+    clearProgressTimers();
+    const invitees = selectInvitees(question);
+    const names = formatNames(invitees);
+    const stages = resuming
+      ? [
+          "Reopening the table…",
+          invitees.length ? `Bringing ${names} back into the argument…` : "Bringing the disagreement back to the table…",
+          "Testing your answer against the disagreement…",
+          "Bourdain is checking whether the fault line moved…",
+          "Working toward a finding…",
+        ]
+      : [
+          "Reading the question…",
+          invitees.length ? `Inviting ${names} to the table…` : "Inviting a few dissenting voices to the table…",
+          "Checking the source material…",
+          "The table is arguing…",
+          "Bourdain is looking for the fault line…",
+        ];
+    const delays = [0, 650, 2100, 4300, 7200];
+
+    setConveningLine(stages[0]);
+    for (let index = 1; index < stages.length; index += 1) {
+      progressTimers.current.push(
+        window.setTimeout(() => setConveningLine(stages[index]), delays[index]),
+      );
+    }
+    progressTimers.current.push(
+      window.setTimeout(
+        () => setConveningLine(resuming ? "The table is still working toward the finding…" : "Still at the table. This one needs a minute…"),
+        11_500,
+      ),
+    );
+  }
+
+  useEffect(() => () => clearProgressTimers(), []);
 
   async function requestCouncil(payload: CouncilPayload, priorPause: string | null) {
     const controller = new AbortController();
@@ -154,6 +241,7 @@ export function App() {
       });
     } finally {
       window.clearTimeout(timeout);
+      clearProgressTimers();
       setPending(false);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
@@ -186,6 +274,7 @@ export function App() {
     setPending(true);
     setPauseQuestion(null);
     setFailedAttempt(null);
+    beginConvening(trimmed, answeringPause);
 
     await requestCouncil(payload, priorPause);
   }
@@ -193,9 +282,11 @@ export function App() {
   async function retryFailed() {
     if (!failedAttempt || pending) return;
     const attempt = failedAttempt;
+    const lastUserMessage = [...attempt.payload.messages].reverse().find((message) => message.role === "user");
     setPending(true);
     setPauseQuestion(null);
     setFailedAttempt(null);
+    beginConvening(lastUserMessage?.content || "", attempt.payload.phase === "resume");
     await requestCouncil(attempt.payload, attempt.priorPause);
   }
 
@@ -205,11 +296,13 @@ export function App() {
   }
 
   function reset() {
+    clearProgressTimers();
     setMessages([]);
     setSources([]);
     setPauseQuestion(null);
     setFailedAttempt(null);
     setInput("");
+    setConveningLine("Convening the table…");
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
@@ -256,7 +349,10 @@ export function App() {
             {pending && (
               <article className="message assistant loading">
                 <div className="message-label">The Council</div>
-                <div className="thinking"><i /><i /><i /> Convening the table</div>
+                <div className="thinking">
+                  <span className="thinking-dots" aria-hidden="true"><i /><i /><i /></span>
+                  <span key={conveningLine} className="thinking-copy">{conveningLine}</span>
+                </div>
               </article>
             )}
           </div>
