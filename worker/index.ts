@@ -1,4 +1,5 @@
 import { COUNCIL_SYSTEM_PROMPT, formatSourceContext } from "./prompt";
+import { ensureArtistWitness } from "./artistWitness";
 import { selectSources } from "./sources";
 import { createTablePlan } from "./tablePlan";
 
@@ -212,7 +213,7 @@ async function handleCouncil(request: Request, env: Env) {
   }
 
   const combinedUserText = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
-  const sources = selectSources(combinedUserText);
+  const sources = ensureArtistWitness(selectSources(combinedUserText), combinedUserText);
   const allowedSourceIds = new Set(sources.map((source) => source.id));
   const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
   const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
