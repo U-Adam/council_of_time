@@ -19,6 +19,7 @@ const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8000;
 const DEFAULT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 const FALLBACK_MODELS = ["@cf/zai-org/glm-4.7-flash", "@cf/qwen/qwen3-30b-a3b-fp8"];
+const SMOKE_KEY = "cot-smoke-5d8f3a";
 
 function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -136,6 +137,41 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
   throw Object.assign(new Error("All Council models failed."), { failures });
 }
 
+async function handleSmoke(env: Env) {
+  const models = uniqueModels(env.COUNCIL_MODEL);
+  const results: Array<Record<string, unknown>> = [];
+
+  for (const model of models) {
+    const startedAt = Date.now();
+    try {
+      const result = await env.AI.run(model as Parameters<Ai["run"]>[0], {
+        messages: [
+          { role: "system", content: "Reply with exactly OK." },
+          { role: "user", content: "Health check." },
+        ],
+        max_completion_tokens: 16,
+        temperature: 0,
+      } as any);
+      const text = parseModelText(result);
+      results.push({
+        model,
+        ok: Boolean(text),
+        text: text.slice(0, 40),
+        latencyMs: Date.now() - startedAt,
+      });
+    } catch (error) {
+      results.push({
+        model,
+        ok: false,
+        error: errorDetail(error).slice(0, 500),
+        latencyMs: Date.now() - startedAt,
+      });
+    }
+  }
+
+  return json({ ok: results.some((result) => result.ok === true), results });
+}
+
 async function handleCouncil(request: Request, env: Env) {
   const requestId = crypto.randomUUID().slice(0, 8);
   const body = (await request.json().catch(() => null)) as CouncilRequest | null;
@@ -203,6 +239,11 @@ export default {
         primaryModel: env.COUNCIL_MODEL || DEFAULT_MODEL,
         fallbackModels: FALLBACK_MODELS,
       });
+    }
+
+    if (url.pathname === "/api/_smoke" && request.method === "GET") {
+      if (url.searchParams.get("key") !== SMOKE_KEY) return json({ error: "Not found" }, { status: 404 });
+      return handleSmoke(env);
     }
 
     if (url.pathname === "/api/council" && request.method === "POST") {
