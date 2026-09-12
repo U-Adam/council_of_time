@@ -18,7 +18,7 @@ interface Env {
 const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8000;
 const DEFAULT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
-const FALLBACK_MODELS = ["@cf/zai-org/glm-4.7-flash", "@cf/qwen/qwen3-30b-a3b-fp8"];
+const FALLBACK_MODELS = ["@cf/zai-org/glm-4.7-flash", "@cf/meta/llama-3.1-8b-instruct-fast"];
 const SMOKE_KEY = "cot-smoke-5d8f3a";
 
 function json(data: unknown, init: ResponseInit = {}) {
@@ -105,9 +105,16 @@ function safePreview(value: unknown) {
   }
 }
 
-function generationOptions(maxCompletionTokens: number, temperature: number) {
+function generationOptions(model: string, maxTokens: number, temperature: number) {
+  if (model === "@cf/meta/llama-3.1-8b-instruct-fast") {
+    return {
+      max_tokens: maxTokens,
+      temperature,
+    };
+  }
+
   return {
-    max_completion_tokens: maxCompletionTokens,
+    max_completion_tokens: maxTokens,
     temperature,
     chat_template_kwargs: {
       enable_thinking: false,
@@ -123,7 +130,7 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
     try {
       const result = await env.AI.run(model as Parameters<Ai["run"]>[0], {
         messages: [{ role: "system", content: systemPrompt }, ...messages],
-        ...generationOptions(1800, 0.35),
+        ...generationOptions(model, 1800, 0.35),
       } as any);
 
       const raw = parseModelText(result);
@@ -154,7 +161,7 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
   throw Object.assign(new Error("All Council models failed."), { failures });
 }
 
-async function handleSmoke(env: Env) {
+async function handleModelSmoke(env: Env) {
   const models = uniqueModels(env.COUNCIL_MODEL);
   const results: Array<Record<string, unknown>> = [];
 
@@ -166,7 +173,7 @@ async function handleSmoke(env: Env) {
           { role: "system", content: "Reply with exactly OK." },
           { role: "user", content: "Health check." },
         ],
-        ...generationOptions(64, 0),
+        ...generationOptions(model, 64, 0),
       } as any);
       const text = parseModelText(result);
       const record = result && typeof result === "object" ? (result as Record<string, unknown>) : null;
@@ -189,7 +196,35 @@ async function handleSmoke(env: Env) {
     }
   }
 
-  return json({ ok: results.some((result) => result.ok === true), results });
+  return json({ ok: results.every((result) => result.ok === true), results });
+}
+
+async function handleCouncilSmoke(env: Env) {
+  const userQuestion = "Can love survive contempt? The answer may depend on whether the contempt is episodic or chronic. Pause at that fault line before giving a Council Finding.";
+  const sources = selectSources(userQuestion);
+  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
+  const requestId = `smoke-${crypto.randomUUID().slice(0, 6)}`;
+
+  try {
+    const { raw, model, failures } = await runCouncilModel(
+      env,
+      uniqueModels(env.COUNCIL_MODEL),
+      [{ role: "user", content: userQuestion }],
+      systemPrompt,
+      requestId,
+    );
+    const parsed = extractPause(raw);
+    return json({
+      ok: Boolean(parsed.answer),
+      model,
+      recoveredWithFallback: failures.length > 0,
+      answerPreview: parsed.answer.slice(0, 1600),
+      pause: parsed.pause,
+      sourceIds: sources.map((source) => source.id),
+    });
+  } catch (error) {
+    return json({ ok: false, error: errorDetail(error) }, { status: 503 });
+  }
 }
 
 async function handleCouncil(request: Request, env: Env) {
@@ -263,7 +298,8 @@ export default {
 
     if (url.pathname === "/api/_smoke" && request.method === "GET") {
       if (url.searchParams.get("key") !== SMOKE_KEY) return json({ error: "Not found" }, { status: 404 });
-      return handleSmoke(env);
+      if (url.searchParams.get("mode") === "council") return handleCouncilSmoke(env);
+      return handleModelSmoke(env);
     }
 
     if (url.pathname === "/api/council" && request.method === "POST") {
