@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ArrowUp, ExternalLink, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
 import type { ChatMessage, CouncilResponse, CouncilSource } from "./types";
 
@@ -75,7 +76,13 @@ function renderAnswer(text: string, sources: CouncilSource[]) {
 
   return (
     <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
       components={{
+        table: ({ children }) => (
+          <div className="council-table-wrap">
+            <table>{children}</table>
+          </div>
+        ),
         a: ({ href, children }) => {
           const source = href ? sourceByUrl.get(href) : undefined;
           return (
