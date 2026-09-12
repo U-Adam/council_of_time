@@ -7,6 +7,7 @@ const STARTERS = [
   "Can love survive contempt?",
   "What do I owe someone after I change my mind?",
   "When does forgiveness become permission?",
+  "Will there ever be another Winston Churchill?",
 ];
 
 const REQUEST_TIMEOUT_MS = 75_000;
