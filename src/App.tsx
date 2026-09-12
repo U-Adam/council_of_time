@@ -8,6 +8,19 @@ const STARTERS = [
   "When does forgiveness become permission?",
 ];
 
+type CouncilPayload = {
+  messages: ChatMessage[];
+  phase: "open" | "resume";
+  pauseQuestion: string | null;
+};
+
+type FailedAttempt = {
+  payload: CouncilPayload;
+  priorPause: string | null;
+  message: string;
+  requestId?: string;
+};
+
 function SourceLinks({ sources }: { sources: CouncilSource[] }) {
   if (!sources.length) return null;
   return (
@@ -58,9 +71,48 @@ export function App() {
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [pauseQuestion, setPauseQuestion] = useState<string | null>(null);
+  const [failedAttempt, setFailedAttempt] = useState<FailedAttempt | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const transcript = useMemo(() => messages.slice(-10), [messages]);
+
+  async function requestCouncil(payload: CouncilPayload, priorPause: string | null) {
+    try {
+      const response = await fetch("/api/council", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const error = new Error(body?.error || `Council unavailable (${response.status})`) as Error & {
+          requestId?: string;
+        };
+        error.requestId = body?.requestId;
+        throw error;
+      }
+
+      const data = body as CouncilResponse;
+      setMessages((current) => [...current, { role: "assistant", content: data.answer }]);
+      setSources((current) => mergeSources(current, data.sources || []));
+      setPauseQuestion(data.pause?.question || null);
+      setFailedAttempt(null);
+    } catch (error) {
+      const typed = error as Error & { requestId?: string };
+      setPauseQuestion(priorPause);
+      setFailedAttempt({
+        payload,
+        priorPause,
+        message: typed?.message || "The Council could not convene. Try again in a moment.",
+        requestId: typed?.requestId,
+      });
+    } finally {
+      setPending(false);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }
 
   async function submitQuestion(question: string) {
     const trimmed = question.trim();
@@ -78,48 +130,28 @@ export function App() {
         ]
       : transcript;
     const nextMessages: ChatMessage[] = [...contextMessages, { role: "user", content: trimmed }];
+    const payload: CouncilPayload = {
+      messages: nextMessages,
+      phase: answeringPause ? "resume" : "open",
+      pauseQuestion: priorPause,
+    };
 
     setMessages((current) => [...current, { role: "user", content: trimmed }]);
     setInput("");
     setPending(true);
     setPauseQuestion(null);
+    setFailedAttempt(null);
 
-    try {
-      const response = await fetch("/api/council", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          messages: nextMessages,
-          phase: answeringPause ? "resume" : "open",
-          pauseQuestion: priorPause,
-        }),
-      });
+    await requestCouncil(payload, priorPause);
+  }
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.error || `Council unavailable (${response.status})`);
-      }
-
-      const data = (await response.json()) as CouncilResponse;
-      setMessages((current) => [...current, { role: "assistant", content: data.answer }]);
-      setSources((current) => mergeSources(current, data.sources || []));
-      setPauseQuestion(data.pause?.question || null);
-    } catch (error) {
-      setPauseQuestion(priorPause);
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          content:
-            error instanceof Error
-              ? `The table couldn't convene: ${error.message}`
-              : "The table couldn't convene. Try again in a moment.",
-        },
-      ]);
-    } finally {
-      setPending(false);
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
+  async function retryFailed() {
+    if (!failedAttempt || pending) return;
+    const attempt = failedAttempt;
+    setPending(true);
+    setPauseQuestion(null);
+    setFailedAttempt(null);
+    await requestCouncil(attempt.payload, attempt.priorPause);
   }
 
   function onSubmit(event: FormEvent) {
@@ -131,6 +163,7 @@ export function App() {
     setMessages([]);
     setSources([]);
     setPauseQuestion(null);
+    setFailedAttempt(null);
     setInput("");
     requestAnimationFrame(() => inputRef.current?.focus());
   }
@@ -184,7 +217,18 @@ export function App() {
           </div>
         )}
 
-        {pauseQuestion && !pending && (
+        {failedAttempt && !pending && (
+          <section className="error-card" role="alert">
+            <div className="section-kicker">The table couldn't convene</div>
+            <p>{failedAttempt.message}</p>
+            <div className="error-actions">
+              <button type="button" onClick={() => void retryFailed()}>Try again</button>
+              {failedAttempt.requestId && <span>Reference {failedAttempt.requestId}</span>}
+            </div>
+          </section>
+        )}
+
+        {pauseQuestion && !pending && !failedAttempt && (
           <section className="pause-card">
             <div className="section-kicker">Bourdain pauses the table</div>
             <h2>{pauseQuestion}</h2>
