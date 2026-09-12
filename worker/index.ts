@@ -1,5 +1,6 @@
 import { COUNCIL_SYSTEM_PROMPT, formatSourceContext } from "./prompt";
 import { selectSources } from "./sources";
+import { createTablePlan } from "./tablePlan";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -177,6 +178,22 @@ async function runCouncilModel(
   throw Object.assign(new Error("All Council models failed."), { failures });
 }
 
+async function handleTablePlan(request: Request) {
+  const body = (await request.json().catch(() => null)) as CouncilRequest | null;
+  const messages = sanitizeMessages(body?.messages);
+
+  if (!messages.length || messages[messages.length - 1]?.role !== "user") {
+    return json({ error: "A user question is required." }, { status: 400 });
+  }
+
+  const combinedUserText = messages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content)
+    .join("\n");
+
+  return json(createTablePlan(combinedUserText));
+}
+
 async function handleCouncil(request: Request, env: Env) {
   const requestId = crypto.randomUUID().slice(0, 8);
   const body = (await request.json().catch(() => null)) as CouncilRequest | null;
@@ -252,6 +269,10 @@ export default {
         primaryModel: env.COUNCIL_MODEL || DEFAULT_MODEL,
         fallbackModels: FALLBACK_MODELS,
       });
+    }
+
+    if (url.pathname === "/api/table-plan" && request.method === "POST") {
+      return handleTablePlan(request);
     }
 
     if (url.pathname === "/api/council" && request.method === "POST") {
