@@ -17,4 +17,6 @@ export type CouncilResponse = {
   } | null;
   sources: CouncilSource[];
   model?: string;
+  recoveredWithFallback?: boolean;
+  requestId?: string;
 };
