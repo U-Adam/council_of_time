@@ -1,11 +1,11 @@
-.council-table-wrap td:first-child code {
+.artist-witness-badge {
   display: inline-flex;
   align-items: center;
-  margin-left: .5em;
-  padding: .22em .52em .24em;
-  border: 1px solid rgba(212, 168, 79, .48);
+  margin-left: .48em;
+  padding: .2em .5em .22em;
+  border: 1px solid rgba(212, 168, 79, .5);
   border-radius: 999px;
-  background: rgba(212, 168, 79, .08);
+  background: rgba(212, 168, 79, .07);
   color: #dfbd74;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   font-size: .58em;
@@ -17,13 +17,9 @@
   white-space: nowrap;
 }
 
-.council-table-wrap td:first-child code::before {
-  content: none;
-}
-
 @media (max-width: 640px) {
-  .council-table-wrap td:first-child code {
-    margin-left: .45em;
+  .artist-witness-badge {
+    margin-left: .42em;
     font-size: .55em;
     vertical-align: .16em;
   }
