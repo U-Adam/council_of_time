@@ -105,6 +105,16 @@ function safePreview(value: unknown) {
   }
 }
 
+function generationOptions(maxCompletionTokens: number, temperature: number) {
+  return {
+    max_completion_tokens: maxCompletionTokens,
+    temperature,
+    chat_template_kwargs: {
+      enable_thinking: false,
+    },
+  };
+}
+
 async function runCouncilModel(env: Env, models: string[], messages: Message[], systemPrompt: string, requestId: string) {
   const failures: Array<{ model: string; detail: string }> = [];
 
@@ -113,8 +123,7 @@ async function runCouncilModel(env: Env, models: string[], messages: Message[], 
     try {
       const result = await env.AI.run(model as Parameters<Ai["run"]>[0], {
         messages: [{ role: "system", content: systemPrompt }, ...messages],
-        max_completion_tokens: 1800,
-        temperature: 0.35,
+        ...generationOptions(1800, 0.35),
       } as any);
 
       const raw = parseModelText(result);
@@ -157,15 +166,14 @@ async function handleSmoke(env: Env) {
           { role: "system", content: "Reply with exactly OK." },
           { role: "user", content: "Health check." },
         ],
-        max_completion_tokens: 16,
-        temperature: 0,
+        ...generationOptions(64, 0),
       } as any);
       const text = parseModelText(result);
       const record = result && typeof result === "object" ? (result as Record<string, unknown>) : null;
       results.push({
         model,
         ok: Boolean(text),
-        text: text.slice(0, 40),
+        text: text.slice(0, 80),
         resultType: Array.isArray(result) ? "array" : typeof result,
         keys: record ? Object.keys(record) : [],
         preview: safePreview(result),
