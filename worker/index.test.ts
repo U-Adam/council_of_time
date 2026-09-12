@@ -9,6 +9,7 @@ import {
 import { ARTIST_SOURCE_CATALOG } from "./artistSources";
 import { ARTIST_WITNESS_IDS, ensureArtistWitness, selectArtistWitness } from "./artistWitness";
 import { selectSources, SOURCE_CATALOG } from "./sources";
+import { createTablePlan } from "./tablePlan";
 
 describe("Workers AI response parsing", () => {
   it("extracts visible chat-completion content", () => {
@@ -51,12 +52,13 @@ describe("fault-line state", () => {
     );
   });
 
-  it("marks a resumed turn with the exact prior question", () => {
+  it("marks a resumed turn with the exact prior question and preserves the table", () => {
     const prior = "Is the contempt episodic or chronic?";
     const instruction = continuationInstruction("resume", prior);
 
     expect(instruction).toContain(prior);
     expect(instruction).toContain("Resume the existing deliberation");
+    expect(instruction).toContain("Keep the existing table and source roster");
   });
 });
 
@@ -173,6 +175,14 @@ describe("artist witness registry", () => {
     expect(sources.map((source) => source.id)).toContain("S29");
     expect(sources.length).toBeLessThanOrEqual(9);
   });
+
+  it("uses selected case context to choose a relevant witness", () => {
+    const question = "Will there ever be another Winston Churchill?";
+    const sources = ensureArtistWitness(selectSources(question), question);
+
+    expect(sources.some((source) => source.id === "S30")).toBe(true);
+    expect(createTablePlan(question).artistWitness).toBe("Bob Dylan");
+  });
 });
 
 describe("topic-aware source selection", () => {
@@ -201,5 +211,11 @@ describe("topic-aware source selection", () => {
     const topThree = new Set(ids.slice(0, 3));
 
     expect(topThree).toEqual(new Set(["S19", "S20", "S21"]));
+  });
+
+  it("routes the Churchill feeder to authoritative case sources", () => {
+    const ids = selectSources("Will there ever be another Winston Churchill?").map((source) => source.id);
+
+    expect(ids.slice(0, 2)).toEqual(["S38", "S39"]);
   });
 });
