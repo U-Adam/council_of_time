@@ -128,10 +128,9 @@ function stableNumber(seed: string) {
 }
 
 export function conceptsFor(text: string) {
-  const normalized = normalize(text);
   const concepts = new Set<string>();
   for (const bundle of CONCEPT_BUNDLES) {
-    if (!bundle.keywords.some((keyword) => normalized.includes(normalize(keyword)))) continue;
+    if (!bundle.keywords.some((keyword) => phrasePresent(text, keyword))) continue;
     bundle.concepts.forEach((concept) => concepts.add(normalize(concept)));
   }
   return concepts;
@@ -161,14 +160,12 @@ function tagConceptMatch(tag: string, concepts: Set<string>) {
 }
 
 function scoreSource(source: PublicSource, text: string, concepts: Set<string>) {
-  const normalizedText = normalize(text);
   const questionTokens = tokenize(text);
   const explicit = isExplicitAnchor(source, text);
   let score = explicit ? 100 : 0;
 
   for (const tag of source.tags) {
-    const normalizedTag = normalize(tag);
-    if (normalizedText.includes(normalizedTag)) score += 10;
+    if (phrasePresent(text, tag)) score += 10;
     const tagTokens = tokenize(tag);
     const tokenOverlap = [...tagTokens].filter((token) => questionTokens.has(token)).length;
     score += tokenOverlap * 2;
