@@ -3,6 +3,7 @@ import { recentSourceIds } from "./index";
 import {
   ALL_SOURCE_CATALOG_V2,
   ARTIST_SOURCE_CATALOG_V2,
+  conceptsFor,
   selectArtistWitnessV2,
   selectSourcesV2,
 } from "./selection";
@@ -110,6 +111,13 @@ describe("full-roster Council selection", () => {
     ).map((source) => voiceForSource(source.id));
 
     expect(voices).toContain("Kyle Powys Whyte");
+  });
+
+  it("matches concepts as words and phrases rather than accidental substrings", () => {
+    const concepts = conceptsFor("How do we move toward forgiveness after a mistake?");
+
+    expect(concepts.has("forgiveness")).toBe(true);
+    expect(concepts.has("war")).toBe(false);
   });
 });
 
