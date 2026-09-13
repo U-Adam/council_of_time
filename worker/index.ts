@@ -1,7 +1,7 @@
 import { COUNCIL_SYSTEM_PROMPT, formatSourceContext } from "./prompt";
-import { ARTIST_SOURCE_CATALOG } from "./artistSources";
 import { ARTIST_WITNESS_IDS, ensureArtistWitness } from "./artistWitness";
-import { selectSources, SOURCE_CATALOG, type PublicSource } from "./sources";
+import { ALL_SOURCE_CATALOG_V2, selectSourcesV2 } from "./selection";
+import type { PublicSource } from "./sources";
 import { createTablePlan } from "./tablePlan";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -24,8 +24,7 @@ const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8000;
 const DEFAULT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 const FALLBACK_MODELS = ["@cf/zai-org/glm-4.7-flash", "@cf/meta/llama-3.1-8b-instruct-fast"];
-const ALL_SOURCE_CATALOG = [...SOURCE_CATALOG, ...ARTIST_SOURCE_CATALOG];
-const SOURCE_BY_ID = new Map(ALL_SOURCE_CATALOG.map((source) => [source.id, source]));
+const SOURCE_BY_ID = new Map(ALL_SOURCE_CATALOG_V2.map((source) => [source.id, source]));
 
 function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -57,6 +56,24 @@ function sanitizeSourceIds(value: unknown): string[] {
 
 function resolveSources(ids: string[]): PublicSource[] {
   return ids.map((id) => SOURCE_BY_ID.get(id)).filter((source): source is PublicSource => Boolean(source));
+}
+
+export function recentSourceIds(messages: Message[], assistantLimit = 4) {
+  const assistantMessages = messages.filter((message) => message.role === "assistant").slice(-assistantLimit);
+  const ids: string[] = [];
+
+  for (const message of assistantMessages) {
+    const seenThisTurn = new Set<string>();
+    for (const match of message.content.matchAll(/\[(S\d+)\]/g)) {
+      const id = match[1];
+      if (SOURCE_BY_ID.has(id) && !seenThisTurn.has(id)) {
+        seenThisTurn.add(id);
+        ids.push(id);
+      }
+    }
+  }
+
+  return ids;
 }
 
 export function parseModelText(result: unknown): string {
@@ -229,12 +246,10 @@ async function handleTablePlan(request: Request) {
     return json({ error: "A user question is required." }, { status: 400 });
   }
 
-  const combinedUserText = messages
-    .filter((message) => message.role === "user")
-    .map((message) => message.content)
-    .join("\n");
+  const latestUserText = messages[messages.length - 1].content;
+  const recentIds = recentSourceIds(messages);
 
-  return json(createTablePlan(combinedUserText));
+  return json(createTablePlan(latestUserText, 5, recentIds));
 }
 
 async function handleCouncil(request: Request, env: Env) {
@@ -254,15 +269,17 @@ async function handleCouncil(request: Request, env: Env) {
     );
   }
 
-  const combinedUserText = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
+  const latestUserText = messages[messages.length - 1].content;
+  const recentIds = recentSourceIds(messages);
   const requestedSourceIds = sanitizeSourceIds(body?.sourceIds);
   const preservedSources = body?.phase === "resume" ? resolveSources(requestedSourceIds) : [];
   const sources = preservedSources.length
-    ? ensureArtistWitness(preservedSources, combinedUserText)
-    : ensureArtistWitness(selectSources(combinedUserText), combinedUserText);
+    ? ensureArtistWitness(preservedSources, latestUserText, 9, recentIds)
+    : ensureArtistWitness(selectSourcesV2(latestUserText, 9, recentIds), latestUserText, 9, recentIds);
   const allowedSourceIds = new Set(sources.map((source) => source.id));
   const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
-  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
+  const selectionInstruction = `\n\nSELECTION DISCIPLINE\nThe supplied source roster was chosen for this question by relevance first, with recent repetition used only as a tiebreaker among comparably relevant voices. Use the strongest distinct perspectives actually supported by these sources. Do not default to a familiar recurring voice when another supplied voice is comparably relevant and adds a genuinely different tradition, discipline, or moral lens. Never sacrifice a materially stronger source merely for novelty or demographic rotation.`;
+  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}${selectionInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
   const models = uniqueModels(env.COUNCIL_MODEL);
 
   try {
