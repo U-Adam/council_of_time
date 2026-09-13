@@ -306,7 +306,7 @@ export function selectSourcesV2(text: string, max = 9, recentSourceIds: string[]
   }
 
   const topicalSources = selected.map((candidate) => candidate.source);
-  return [...topicalSources, ...caseSources, ...moderatorSources].slice(0, max);
+  return [...caseSources, ...topicalSources, ...moderatorSources].slice(0, max);
 }
 
 function artistContextScore(source: PublicSource, contextSources: PublicSource[], concepts: Set<string>) {
@@ -325,15 +325,18 @@ export function selectArtistWitnessV2(
   contextSources: PublicSource[] = [],
   recentSourceIds: string[] = [],
 ): PublicSource {
-  const contextText = `${text} ${contextSources.flatMap((source) => source.tags).join(" ")}`;
+  const contextBasis = contextSources
+    .filter((source) => !MODERATOR_IDS.has(source.id))
+    .slice(0, 4);
+  const contextText = `${text} ${contextBasis.flatMap((source) => source.tags).join(" ")}`;
   const concepts = conceptsFor(contextText);
   const recent = recentVoiceCounts(recentSourceIds);
-  const contextVoices = new Set(contextSources.map((source) => voiceForSource(source.id)).filter(Boolean));
+  const contextVoices = new Set(contextBasis.map((source) => voiceForSource(source.id)).filter(Boolean));
 
   const candidates = ARTIST_SOURCE_CATALOG_V2.map((source) => {
     const meta = sourceMeta(source.id);
     const direct = scoreSource(source, text, conceptsFor(text));
-    const contextScore = artistContextScore(source, contextSources, concepts);
+    const contextScore = artistContextScore(source, contextBasis, concepts);
     const duplicateThinkerVoice = Boolean(meta?.voice && contextVoices.has(meta.voice));
     const score = direct.score + contextScore - (duplicateThinkerVoice && !direct.explicit ? 20 : 0);
     return {
