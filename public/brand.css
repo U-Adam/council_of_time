@@ -1,0 +1,21 @@
+/* Canonical Council of Time brand overrides.
+   The witness seal is the only compact mark. The legacy letter C must never render visually. */
+.brand .mark {
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background-color: #11100e !important;
+  background-image: url('/council-mark.svg') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 100% 100% !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-indent: -9999px !important;
+  box-shadow: none !important;
+}
+
+.brand strong {
+  font-style: normal !important;
+}
