@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">The Council of Time watermark</title>
+  <desc id="desc">A transparent line-art version of the witness seal for background use.</desc>
+  <g fill="none" stroke="#b99249" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="128" cy="128" r="106" stroke-width="6"/>
+    <circle cx="128" cy="22" r="7" stroke="#d4a84f" stroke-width="4"/>
+    <circle cx="234" cy="128" r="7" stroke="#d4a84f" stroke-width="4"/>
+    <circle cx="128" cy="234" r="7" stroke="#d4a84f" stroke-width="4"/>
+    <circle cx="22" cy="128" r="7" stroke="#d4a84f" stroke-width="4"/>
+    <path d="M50 128C72 94 101 80 128 80s56 14 78 48c-22 34-51 48-78 48s-56-14-78-48Z" stroke="#c9b77f" stroke-width="7"/>
+    <circle cx="128" cy="128" r="27" stroke-width="5"/>
+  </g>
+  <path d="M128 96l8 24 24 8-24 8-8 24-8-24-24-8 24-8 8-24Z" fill="#d4a84f"/>
+  <circle cx="128" cy="128" r="6" fill="#c9b77f"/>
+</svg>

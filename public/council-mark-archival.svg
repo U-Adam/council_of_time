@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">The Council of Time archival seal</title>
+  <desc id="desc">A monochrome ink version of the witness seal for print and archival use.</desc>
+  <g fill="none" stroke="#201b15" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="128" cy="128" r="106" stroke-width="7"/>
+    <circle cx="128" cy="22" r="7" stroke-width="4"/>
+    <circle cx="234" cy="128" r="7" stroke-width="4"/>
+    <circle cx="128" cy="234" r="7" stroke-width="4"/>
+    <circle cx="22" cy="128" r="7" stroke-width="4"/>
+    <path d="M50 128C72 94 101 80 128 80s56 14 78 48c-22 34-51 48-78 48s-56-14-78-48Z" stroke-width="7"/>
+    <circle cx="128" cy="128" r="27" stroke-width="5"/>
+  </g>
+  <path d="M128 96l8 24 24 8-24 8-8 24-8-24-24-8 24-8 8-24Z" fill="#201b15"/>
+  <circle cx="128" cy="128" r="6" fill="#f2ede4" stroke="#201b15" stroke-width="2"/>
+</svg>

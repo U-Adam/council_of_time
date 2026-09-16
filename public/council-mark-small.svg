@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">The Council of Time small witness seal</title>
+  <desc id="desc">A simplified brass witness seal optimized for small sizes.</desc>
+  <circle cx="64" cy="64" r="62" fill="#11100e"/>
+  <circle cx="64" cy="64" r="52" fill="none" stroke="#b99249" stroke-width="5"/>
+  <path d="M26 64c11-18 25-25 38-25s27 7 38 25c-11 18-25 25-38 25S37 82 26 64Z" fill="none" stroke="#efe6d8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="64" r="15" fill="#11100e" stroke="#b99249" stroke-width="4"/>
+  <path d="M64 46l5 13 13 5-13 5-5 13-5-13-13-5 13-5 5-13Z" fill="#d4a84f"/>
+  <circle cx="64" cy="64" r="4" fill="#efe6d8"/>
+</svg>

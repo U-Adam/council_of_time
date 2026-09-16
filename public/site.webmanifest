@@ -9,7 +9,7 @@
   "theme_color": "#11100e",
   "icons": [
     {
-      "src": "/council-mark.svg",
+      "src": "/council-mark-small.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

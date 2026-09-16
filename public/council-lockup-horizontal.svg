@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 240" role="img" aria-labelledby="title desc">
+  <title id="title">The Council of Time horizontal lockup</title>
+  <desc id="desc">The Council witness seal beside the wordmark and the line A serious table for difficult questions.</desc>
+  <g transform="translate(28 28) scale(.72)">
+    <rect width="256" height="256" rx="128" fill="#11100e"/>
+    <circle cx="128" cy="128" r="106" fill="none" stroke="#b99249" stroke-width="7"/>
+    <g fill="#11100e" stroke="#d4a84f" stroke-width="4">
+      <circle cx="128" cy="22" r="7"/><circle cx="234" cy="128" r="7"/><circle cx="128" cy="234" r="7"/><circle cx="22" cy="128" r="7"/>
+    </g>
+    <path d="M50 128C72 94 101 80 128 80s56 14 78 48c-22 34-51 48-78 48s-56-14-78-48Z" fill="none" stroke="#efe6d8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="128" cy="128" r="27" fill="#11100e" stroke="#b99249" stroke-width="5"/>
+    <path d="M128 96l8 24 24 8-24 8-8 24-8-24-24-8 24-8 8-24Z" fill="#d4a84f"/>
+    <circle cx="128" cy="128" r="6" fill="#efe6d8"/>
+  </g>
+  <line x1="238" y1="57" x2="238" y2="183" stroke="#b99249" stroke-width="2"/>
+  <text x="278" y="111" fill="#efe6d8" font-family="Georgia, 'Times New Roman', serif" font-size="60" font-weight="600" letter-spacing="-1">The Council of Time</text>
+  <text x="281" y="153" fill="#c4b9aa" font-family="Georgia, 'Times New Roman', serif" font-size="24">A serious table for difficult questions.</text>
+  <line x1="281" y1="177" x2="515" y2="177" stroke="#b99249" stroke-width="2"/>
+</svg>
