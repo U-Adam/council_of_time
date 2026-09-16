@@ -79,10 +79,12 @@ describe("full-roster Council selection", () => {
       "Toni Morrison",
       "John Steinbeck",
       "David Bowie",
+      "Jordan Peele",
+      "Mac Miller",
     ];
     const artistVoices = new Set(ARTIST_SOURCE_CATALOG_V2.map((source) => voiceForSource(source.id)));
 
-    expect(ARTIST_SOURCE_CATALOG_V2.length).toBe(19);
+    expect(ARTIST_SOURCE_CATALOG_V2.length).toBe(21);
     for (const voice of required) {
       expect(artistVoices.has(voice), `Missing Artist Witness ${voice}`).toBe(true);
     }
