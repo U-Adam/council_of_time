@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">The Council of Time relief seal</title>
+  <desc id="desc">A restrained embossed version of the witness seal for ceremonial and print treatments.</desc>
+  <defs>
+    <filter id="relief" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="-1.5" dy="-1.5" stdDeviation="1" flood-color="#fffaf0" flood-opacity=".55"/>
+      <feDropShadow dx="1.5" dy="1.5" stdDeviation="1.3" flood-color="#5f5548" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <circle cx="128" cy="128" r="118" fill="#d8d0c4"/>
+  <g filter="url(#relief)" fill="none" stroke="#b9ae9e" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="128" cy="128" r="102" stroke-width="6"/>
+    <path d="M52 128C73 95 101 82 128 82s55 13 76 46c-21 33-49 46-76 46s-55-13-76-46Z" stroke-width="7"/>
+    <circle cx="128" cy="128" r="26" stroke-width="5"/>
+  </g>
+  <path d="M128 98l8 22 22 8-22 8-8 22-8-22-22-8 22-8 8-22Z" fill="#aaa08f" filter="url(#relief)"/>
+  <circle cx="128" cy="128" r="6" fill="#ded6ca" filter="url(#relief)"/>
+</svg>
