@@ -161,15 +161,15 @@ textarea:focus-visible {
 .privacy-note {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 6px;
   margin-top: 26px;
-  padding-inline: 8px;
+  padding-inline: 0;
   color: var(--muted-soft);
   font-family: var(--font-mono);
   font-size: 10.5px;
   line-height: 1.45;
-  text-align: center;
+  text-align: left;
 }
 
 @media (max-width: 640px) {
