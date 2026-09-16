@@ -1,7 +1,7 @@
 {
   "name": "The Council of Time",
   "short_name": "Council of Time",
-  "description": "A rigorous round table for difficult questions. The goal is clearer thinking, not consensus.",
+  "description": "A serious table for difficult questions. The goal is clearer thinking, not consensus.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,7 +9,7 @@
   "theme_color": "#11100e",
   "icons": [
     {
-      "src": "/council-mark-small.svg",
+      "src": "/favicon-v2.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
