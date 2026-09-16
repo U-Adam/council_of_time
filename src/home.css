@@ -19,16 +19,17 @@
 
 .shell:has(.hero) .topbar {
   min-height: 194px;
-  padding: 28px 64px 30px;
+  padding: 28px 0 30px;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   border-bottom: 1px solid color-mix(in srgb, var(--gold) 36%, var(--line));
 }
 .shell:has(.hero) .brand {
   flex-direction: column;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 13px;
-  text-align: center;
+  text-align: left;
 }
 .shell:has(.hero) .brand .mark {
   width: 82px;
@@ -48,19 +49,19 @@
 
 .hero-copy {
   max-width: 720px;
-  margin: 0 auto;
-  text-align: center;
+  margin: 0;
+  text-align: left;
 }
 .hero .hero-copy h1 { display: none; }
 .shell:has(.hero) .eyebrow {
-  justify-content: center;
+  justify-content: flex-start;
   margin: 0 0 12px;
   color: var(--gold-bright);
   font-size: clamp(16px, 2.2vw, 19px);
 }
 .hero-copy p {
   max-width: 650px;
-  margin: 0 auto 28px;
+  margin: 0 0 28px;
   color: var(--muted);
   font-family: var(--font-body);
   font-size: clamp(16px, 2vw, 19px);
@@ -202,7 +203,7 @@ textarea::placeholder { color: var(--muted-soft); opacity: 1; }
 
 .home-secondary-action {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   margin-top: 20px;
 }
 .about-button {
@@ -227,7 +228,7 @@ textarea::placeholder { color: var(--muted-soft); opacity: 1; }
 @media (max-width: 640px) {
   .shell:has(.hero) .topbar {
     min-height: 166px;
-    padding: 22px 52px 24px;
+    padding: 22px 52px 24px 0;
   }
   .shell:has(.hero) .brand { gap: 10px; }
   .shell:has(.hero) .brand .mark { width: 64px; height: 64px; flex-basis: 64px; }
