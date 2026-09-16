@@ -249,7 +249,7 @@ async function handleTablePlan(request: Request) {
   const latestUserText = messages[messages.length - 1].content;
   const recentIds = recentSourceIds(messages);
 
-  return json(createTablePlan(latestUserText, 5, recentIds));
+  return json(createTablePlan(latestUserText, undefined, recentIds));
 }
 
 async function handleCouncil(request: Request, env: Env) {
@@ -273,13 +273,26 @@ async function handleCouncil(request: Request, env: Env) {
   const recentIds = recentSourceIds(messages);
   const requestedSourceIds = sanitizeSourceIds(body?.sourceIds);
   const preservedSources = body?.phase === "resume" ? resolveSources(requestedSourceIds) : [];
+  const tablePlan = body?.phase === "resume" ? null : createTablePlan(latestUserText, undefined, recentIds);
+  const plannedSources = tablePlan ? resolveSources(tablePlan.sourceIds) : [];
   const sources = preservedSources.length
     ? ensureArtistWitness(preservedSources, latestUserText, 9, recentIds)
-    : ensureArtistWitness(selectSourcesV2(latestUserText, 9, recentIds), latestUserText, 9, recentIds);
+    : ensureArtistWitness(
+        plannedSources.length ? plannedSources : selectSourcesV2(latestUserText, 9, recentIds),
+        latestUserText,
+        9,
+        recentIds,
+      );
   const allowedSourceIds = new Set(sources.map((source) => source.id));
   const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
+  const plannedArtist = tablePlan?.artistWitness
+    ? ` The required Artist Witness is ${tablePlan.artistWitness}.`
+    : " Include one Artist Witness from the supplied artist source material.";
+  const tableInstruction = tablePlan
+    ? `\n\nTABLE PLAN\nThis is an initial ${tablePlan.depth} Council. The Table is not optional and must seat every planned thinker as a separate row: ${tablePlan.voices.join(", ")}.${plannedArtist} That means at least ${tablePlan.minimumParticipants} participant rows. Anthony Bourdain moderates and does not count as one of those participant rows. Do not collapse the Table to three voices merely because three frameworks seem dominant. The point of the table is productive disagreement across distinct supported lenses. If one planned voice cannot be responsibly represented from the supplied sources, replace that seat with another supported supplied voice rather than shrinking below five participant rows. Keep each row compact so the larger table does not crowd out the Deliberation.`
+    : "";
   const selectionInstruction = `\n\nSELECTION DISCIPLINE\nThe supplied source roster was chosen for this question by relevance first, with recent repetition used only as a tiebreaker among comparably relevant voices. Use the strongest distinct perspectives actually supported by these sources. Do not default to a familiar recurring voice when another supplied voice is comparably relevant and adds a genuinely different tradition, discipline, or moral lens. Never sacrifice a materially stronger source merely for novelty or demographic rotation.`;
-  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}${selectionInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
+  const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}${tableInstruction}${selectionInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
   const models = uniqueModels(env.COUNCIL_MODEL);
 
   try {
