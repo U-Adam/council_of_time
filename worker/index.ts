@@ -286,8 +286,8 @@ async function handleCouncil(request: Request, env: Env) {
   const allowedSourceIds = new Set(sources.map((source) => source.id));
   const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
   const plannedArtist = tablePlan?.artistWitness
-    ? ` The required Artist Witness is ${tablePlan.artistWitness}.`
-    : " Include one Artist Witness from the supplied artist source material.";
+    ? ` The selected Artist Witness is ${tablePlan.artistWitness}.`
+    : " No Artist Witness is required for this table. Do not add one unless an artist source is actually present in the supplied source set and materially improves the argument.";
   const tableInstruction = tablePlan
     ? `\n\nTABLE PLAN\nThis is an initial ${tablePlan.depth} Council. The Table is not optional and must seat every planned thinker as a separate row: ${tablePlan.voices.join(", ")}.${plannedArtist} That means at least ${tablePlan.minimumParticipants} participant rows. Anthony Bourdain moderates and does not count as one of those participant rows. Do not collapse the Table to three voices merely because three frameworks seem dominant. The point of the table is productive disagreement across distinct supported lenses. If one planned voice cannot be responsibly represented from the supplied sources, replace that seat with another supported supplied voice rather than shrinking below five participant rows. Keep each row compact so the larger table does not crowd out the Deliberation.`
     : "";
