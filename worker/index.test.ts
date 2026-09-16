@@ -166,7 +166,7 @@ describe("artist witness registry", () => {
     expect(selectArtistWitness("What does grief do to intimacy and faith?").id).toBe("S33");
   });
 
-  it("guarantees one artist witness while preserving Bourdain's moderator sources", () => {
+  it("adds a witness when the question calls for lived or artistic perspective while preserving Bourdain's moderator sources", () => {
     const question = "What do I owe someone after I change my mind?";
     const sources = ensureArtistWitness(selectSources(question), question);
 
@@ -176,12 +176,12 @@ describe("artist witness registry", () => {
     expect(sources.length).toBeLessThanOrEqual(9);
   });
 
-  it("uses selected case context to choose a relevant witness", () => {
+  it("does not force an Artist Witness into case analysis when none is materially required", () => {
     const question = "Will there ever be another Winston Churchill?";
     const sources = ensureArtistWitness(selectSources(question), question);
 
-    expect(sources.some((source) => source.id === "S30")).toBe(true);
-    expect(createTablePlan(question).artistWitness).toBe("Bob Dylan");
+    expect(sources.some((source) => ARTIST_WITNESS_IDS.has(source.id))).toBe(false);
+    expect(createTablePlan(question).artistWitness).toBeNull();
   });
 });
 
