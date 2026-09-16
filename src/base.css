@@ -6,8 +6,7 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 82% -8%, color-mix(in srgb, var(--gold) 7%, transparent), transparent 34%),
-    radial-gradient(circle at 7% 76%, color-mix(in srgb, var(--ink) 2%, transparent), transparent 30%),
+    radial-gradient(circle at 86% -12%, color-mix(in srgb, var(--gold) 3%, transparent), transparent 30%),
     var(--bg);
   color: var(--ink);
   font-family: var(--font-ui);
@@ -45,7 +44,7 @@ textarea:focus-visible {
   margin: 0 auto;
   padding-top: env(safe-area-inset-top, 0px);
   padding-right: max(18px, env(safe-area-inset-right, 0px));
-  padding-bottom: max(48px, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(42px, env(safe-area-inset-bottom, 0px));
   padding-left: max(18px, env(safe-area-inset-left, 0px));
 }
 
@@ -130,20 +129,24 @@ textarea:focus-visible {
   z-index: 100;
   top: max(16px, env(safe-area-inset-top, 0px));
   right: max(16px, env(safe-area-inset-right, 0px));
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
-  color: var(--gold-bright);
-  box-shadow: 0 8px 26px var(--shadow);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  color: var(--muted);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
   backdrop-filter: blur(12px);
   cursor: pointer;
   transition: transform .16s ease, border-color .16s ease, background .2s ease, color .2s ease;
 }
-.theme-toggle:hover { border-color: color-mix(in srgb, var(--gold) 60%, var(--line)); transform: translateY(-1px); }
+.theme-toggle:hover {
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--line));
+  color: var(--gold-bright);
+  transform: translateY(-1px);
+}
 .theme-toggle:active { transform: translateY(0); }
 
 .eyebrow,
@@ -162,22 +165,23 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
+  gap: 7px;
   margin-top: 26px;
   padding-inline: 0;
   color: var(--muted-soft);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: 10.5px;
   line-height: 1.45;
   text-align: left;
+  letter-spacing: .015em;
 }
 
 @media (max-width: 640px) {
   .shell {
-    padding-right: max(14px, env(safe-area-inset-right, 0px));
-    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
   }
-  .topbar { min-height: 68px; padding-right: 50px; }
+  .topbar { min-height: 68px; padding-right: 48px; }
   .brand strong { font-size: 17px; }
   .brand small { display: none; }
   .brand .mark { width: 36px; height: 36px; flex-basis: 36px; }
