@@ -1,15 +1,10 @@
 import { describe, expect, it } from "vitest";
+import themeSource from "./ThemeToggle.tsx?raw";
 
-// The UI component itself is browser-rendered; these assertions protect the
-// public persistence contract used by both pre-hydration HTML and React.
 describe("theme persistence contract", () => {
-  it("uses the stable Council theme storage key", async () => {
-    const source = await import("./ThemeToggle?raw");
-    expect(source.default).toContain('const STORAGE_KEY = "council-theme"');
-  });
-
-  it("supports both light and dark appearance modes", async () => {
-    const source = await import("./ThemeToggle?raw");
-    expect(source.default).toContain('type Theme = "light" | "dark"');
+  it("uses a stable storage key and supports both appearance modes", () => {
+    expect(themeSource).toContain('const STORAGE_KEY = "council-theme"');
+    expect(themeSource).toContain('type Theme = "light" | "dark"');
+    expect(themeSource).toContain('prefers-color-scheme: light');
   });
 });
