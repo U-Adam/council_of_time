@@ -20,6 +20,10 @@
   --gold-bright: #e4bd69;
   --gold-soft: rgba(197, 156, 74, .11);
   --gold-glow: rgba(228, 189, 105, .18);
+  --console-gold: #e0af46;
+  --console-gold-bright: #f2c96f;
+  --console-surface: rgba(20, 18, 15, .94);
+  --console-glow: rgba(224, 175, 70, .17);
   --rust: #b56b4d;
   --rust-soft: rgba(181, 107, 77, .09);
   --shadow: rgba(0, 0, 0, .26);
@@ -48,6 +52,10 @@
   --gold-bright: #7d5817;
   --gold-soft: rgba(152, 113, 38, .10);
   --gold-glow: rgba(152, 113, 38, .13);
+  --console-gold: #b87905;
+  --console-gold-bright: #8d5900;
+  --console-surface: rgba(255, 250, 239, .97);
+  --console-glow: rgba(184, 121, 5, .18);
   --rust: #985137;
   --rust-soft: rgba(152, 81, 55, .08);
   --shadow: rgba(69, 52, 30, .12);
