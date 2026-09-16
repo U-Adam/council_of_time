@@ -11,7 +11,8 @@ const WITNESS_SIGNAL_TERMS = [
   "art", "artist", "music", "song", "album", "film", "movie", "cinema", "novel", "fiction", "poem", "poetry",
   "painting", "photography", "culture", "performance", "fame", "celebrity", "beauty", "myth", "memory", "grief",
   "mortality", "loneliness", "embodiment", "body", "pain", "masculinity", "self-invention", "reinvention", "addiction",
-  "spectacle", "identity", "alienation", "creative", "story", "storytelling",
+  "spectacle", "identity", "alienation", "creative", "story", "storytelling", "history", "war", "leader", "leadership",
+  "statesman", "statesmanship", "change", "changing",
 ];
 
 function normalize(value: string) {
