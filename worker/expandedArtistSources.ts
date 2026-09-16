@@ -103,4 +103,22 @@ export const EXPANDED_ARTIST_SOURCE_CATALOG: PublicSource[] = [
     tags: ["identity", "self-invention", "alienation", "fame", "performance", "authenticity", "gender presentation", "technology", "futurism", "mortality", "fragmentation", "artifice"],
     note: "Use Bowie on constructed identity, reinvention, fame, technology, mortality, alienation, and the boundary between authenticity and deliberate performance. David Jones is not reducible to any persona; song speaker is not Bowie; preserve collaborators and posthumous provenance.",
   },
+  {
+    id: "S77",
+    title: "Jordan Peele — Monkeypaw Productions",
+    url: "https://www.monkeypawproductions.com/",
+    kind: "official",
+    anchors: ["jordan peele", "peele"],
+    tags: ["race", "horror", "satire", "spectacle", "identity", "social power", "violence", "american myth", "genre", "fear", "commodification", "representation"],
+    note: "Use Peele as a film and cultural witness on race, horror, satire, spectacle, identity, representation, social power, fear, and American myth. A character or plot is not Peele's direct doctrine; distinguish writer, director, producer, performer, studio collaboration, and the interpretive claims made by critics or audiences.",
+  },
+  {
+    id: "S78",
+    title: "Mac Miller — official website and estate archive",
+    url: "https://www.macmillerswebsite.com/",
+    kind: "official",
+    anchors: ["mac miller", "malcolm mccormick"],
+    tags: ["self-invention", "artistic maturation", "ambition", "fame", "intimacy", "masculinity", "friendship", "loneliness", "altered states", "substance use", "vulnerability", "mortality", "experimentation", "success", "meaning"],
+    note: "Use Mac Miller as a music and cultural witness on self-invention, artistic maturation, ambition, fame, intimacy, masculinity, friendship, loneliness, vulnerability, altered states, mortality, experimentation, and the tension between success and meaning. Song narrators are not automatically Miller; lyrics are not transparent autobiography or clinical evidence; do not read his 2018 death backward as the single key to the work.",
+  },
 ];

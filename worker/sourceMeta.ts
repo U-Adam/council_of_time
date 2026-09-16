@@ -83,6 +83,8 @@ export const SOURCE_META: Record<string, SourceMeta> = {
   S74: { voice: "Toni Morrison", family: "literature", role: "artist" },
   S75: { voice: "John Steinbeck", family: "literature", role: "artist" },
   S76: { voice: "David Bowie", family: "music-performance", role: "artist" },
+  S77: { voice: "Jordan Peele", family: "film-horror-satire", role: "artist" },
+  S78: { voice: "Mac Miller", family: "music-hip-hop", role: "artist" },
 };
 
 export function sourceMeta(id: string): SourceMeta | undefined {

@@ -2,13 +2,12 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
 import { AboutPage } from "./AboutPage";
-import "./styles.css";
-import "./attribution.css";
-import "./artist-witness.css";
+import { ThemeToggle } from "./ThemeToggle";
+import "./tokens.css";
+import "./base.css";
+import "./home.css";
+import "./conversation.css";
 import "./about.css";
-import "./brand.css";
-import "./mission.css";
-import "./site-theme.css";
 
 const isAboutPage = window.location.pathname === "/about" || window.location.pathname.startsWith("/about/");
 
@@ -35,6 +34,7 @@ function HomeApp() {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    <ThemeToggle />
     {isAboutPage ? <AboutPage /> : <HomeApp />}
   </React.StrictMode>,
 );
