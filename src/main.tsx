@@ -14,7 +14,7 @@ const isAboutPage = window.location.pathname === "/about" || window.location.pat
 const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]') ?? document.createElement("link");
 favicon.rel = "icon";
 favicon.type = "image/svg+xml";
-favicon.href = "/council-mark.svg";
+favicon.href = "/council-mark-small.svg";
 if (!favicon.parentNode) document.head.appendChild(favicon);
 
 function HomeApp() {
