@@ -82,13 +82,22 @@
   transition: border-color .16s ease, box-shadow .16s ease, background .2s ease;
 }
 .hero .composer {
-  border: 2px solid var(--gold);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 16%, transparent), 0 0 25px var(--gold-glow), 0 18px 50px var(--shadow);
+  border: 2px solid var(--console-gold);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--console-gold) 5%, transparent), transparent 48%),
+    var(--console-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--console-gold) 20%, transparent),
+    0 0 28px var(--console-glow),
+    0 18px 50px var(--shadow);
 }
 .composer:focus-within,
 .hero .composer:focus-within {
-  border-color: var(--gold-bright);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 14%, transparent), 0 0 30px var(--gold-glow), 0 18px 52px var(--shadow);
+  border-color: var(--console-gold-bright);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--console-gold) 17%, transparent),
+    0 0 34px var(--console-glow),
+    0 18px 52px var(--shadow);
 }
 textarea {
   width: 100%;
@@ -105,7 +114,7 @@ textarea {
   line-height: 1.45;
 }
 textarea::placeholder { color: var(--muted-soft); opacity: 1; }
-.hero textarea::placeholder { color: var(--ink); opacity: .78; font-weight: 520; }
+.hero textarea::placeholder { color: var(--ink); opacity: .82; font-weight: 520; }
 .composer textarea:focus,
 .composer textarea:focus-visible { outline: none; }
 .send-button {
@@ -121,6 +130,8 @@ textarea::placeholder { color: var(--muted-soft); opacity: 1; }
   cursor: pointer;
   transition: transform .14s ease, opacity .14s ease, background .16s ease;
 }
+.hero .send-button { background: var(--console-gold); }
+.hero .send-button:not(:disabled):hover { background: var(--console-gold-bright); }
 .send-button:not(:disabled):hover { background: var(--gold-bright); }
 .send-button:not(:disabled):active { transform: scale(.96); }
 .send-button:disabled { opacity: .30; cursor: default; }
