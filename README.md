@@ -11,9 +11,10 @@ A Cloudflare-first, mobile-first deliberative round table for difficult question
 - No application-level server-side conversation database
 - Short rolling transcript supplied by the browser for multi-turn continuity
 - Curated source registry with clickable inline citations and source cards
-- Mandatory Artist Witness selection for substantive initial tables
+- Relevance-driven Artist Witness selection when the artistic/lived-experience lens materially improves the table
 - Explicit fault-line pause state via `PAUSE_QUESTION`
 - Source-roster continuity across fault-line resume turns
+- Persistent light/dark appearance toggle with first-visit system preference
 - Cloudflare Worker version metadata exposed through `/api/health` for deployment verification
 
 ## Source model
@@ -52,12 +53,16 @@ Cloudflare platform observability is enabled for operational diagnosis. Platform
 
 - Anthony Bourdain is a documented moderator/witness, never an impersonation.
 - Major tables generally use 5–9 relevant participants; focused questions may use fewer.
-- Every substantive initial table includes at least one relevant Artist Witness.
+- Artist Witnesses are used when their work materially sharpens the question; they are never added merely to satisfy format.
 - Direct claims are source-grounded and unbadged.
 - Present-day applications are marked `Derived` or `Speculative` when the evidentiary distance matters.
 - Case material about a named subject does not make that subject a Council member.
 - A genuine decision-bearing fault line pauses the table before synthesis.
 - No fabricated quotations, source IDs, intentions, or forced consensus.
+
+## Visual system
+
+The front end uses a single semantic design-token layer shared by dark and light modes. Home, conversation, evidence/citation states, and About methodology each have a dedicated stylesheet rather than stacked override layers. The visual direction is "Archival Future": institutional editorial typography, warm brass accents, restrained geometry, evidence-led metadata, and minimal motion.
 
 ## Migration policy
 
