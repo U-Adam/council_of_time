@@ -1,13 +1,13 @@
 import sharp from "sharp";
 
-const socialSource = "public/social-card-v5.svg";
+const socialSource = "public/social-card-v6.svg";
 const faviconSource = "public/favicon-v2.svg";
 
 await sharp(socialSource)
   .resize(1200, 630)
   .flatten({ background: "#11100e" })
   .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
-  .toFile("public/social-card-v5.jpg");
+  .toFile("public/social-card-v6.jpg");
 
 await sharp(faviconSource)
   .resize(64, 64)
@@ -24,4 +24,4 @@ await sharp(faviconSource)
   .png()
   .toFile("public/apple-touch-icon-v3.png");
 
-console.log("Generated social-card-v5.jpg and favicon raster assets.");
+console.log("Generated social-card-v6.jpg and favicon raster assets.");
