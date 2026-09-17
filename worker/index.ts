@@ -127,13 +127,19 @@ export function extractPause(answer: string) {
 }
 
 export function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
-  if (phase !== "resume") return "";
-
-  if (typeof pauseQuestion === "string" && pauseQuestion.trim()) {
-    return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Keep the existing table and source roster unless the user's answer itself makes one of those voices irrelevant. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not repeat the initial Table. Do not emit TABLE_CHOICE again on this normal second round. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
+  if (phase === "resume" && typeof pauseQuestion === "string" && pauseQuestion.trim()) {
+    return `\n\nPOST-FAULT-LINE ANSWER STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as the answer to that question. Resume the existing deliberation instead of restarting it. Keep the existing table and source roster unless the answer itself makes a voice irrelevant. Do not repeat the initial Table. Explain concisely what the user's answer changes, strengthens, weakens, or leaves unresolved in the competing frameworks. Do NOT yet give Bourdain's Read, Where This Meets You, a Council Finding, Minority Report, What Would Change This?, a final recommendation, or closing synthesis. End with exactly TABLE_CHOICE: continue_or_close and nothing after it. Do not ask another PAUSE_QUESTION in this stage.`;
   }
 
-  return `\n\nCONTINUATION STATE\nThe user chose to continue after the table's first-round Fault Line without adding a new factual answer. Treat the latest user message as a procedural signal to continue, not as substantive evidence. Resume the existing deliberation instead of restarting it. Keep the existing table and source roster. Do not repeat the initial Table or merely restate the same Fault Line. Deepen the strongest disagreement where useful, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not emit TABLE_CHOICE again on this normal second round. Only ask a new PAUSE_QUESTION if a new, independent fact becomes genuinely decision-bearing.`;
+  if (phase === "conclude") {
+    return `\n\nCONCLUDING ROUND STATE\nThe user has already answered the prior fault-line question and has now chosen to continue the table. Treat the latest user message as a procedural signal, not new substantive evidence. Resume the existing deliberation from the post-answer checkpoint instead of restarting it. Keep the existing table and source roster. Do not repeat the initial Table or the fault-line question. Deepen the remaining disagreement only where useful, then proceed to Bourdain's Read, Where This Meets You when relevant, a Council Finding, and optional Minority Report or What Would Change This? Do not emit TABLE_CHOICE or PAUSE_QUESTION again in this concluding round.`;
+  }
+
+  if (phase === "resume") {
+    return `\n\nPOST-FAULT-LINE ANSWER STATE\nThe user is continuing from a fault-line checkpoint, but the prior question was not supplied. Treat the latest substantive user message as the answer that advances the existing case. Do not restart the Table. Explain what the answer changes and end with exactly TABLE_CHOICE: continue_or_close and nothing after it. Do not synthesize yet.`;
+  }
+
+  return "";
 }
 
 export function ensureArtistWitnessBadge(answer: string, sources: PublicSource[]) {
@@ -286,8 +292,9 @@ async function handleCouncil(request: Request, env: Env) {
   const latestUserText = messages[messages.length - 1].content;
   const recentIds = recentSourceIds(messages);
   const requestedSourceIds = sanitizeSourceIds(body?.sourceIds);
-  const preservedSources = body?.phase === "resume" ? resolveSources(requestedSourceIds) : [];
-  const tablePlan = body?.phase === "resume" ? null : createTablePlan(latestUserText, undefined, recentIds);
+  const continuing = body?.phase === "resume" || body?.phase === "conclude";
+  const preservedSources = continuing ? resolveSources(requestedSourceIds) : [];
+  const tablePlan = continuing ? null : createTablePlan(latestUserText, undefined, recentIds);
   const plannedSources = tablePlan ? resolveSources(tablePlan.sourceIds) : [];
   const sources = preservedSources.length
     ? ensureArtistWitness(preservedSources, latestUserText, 9, recentIds)
@@ -323,7 +330,7 @@ async function handleCouncil(request: Request, env: Env) {
 
     return json({
       ...parsed,
-      phase: body?.phase === "resume" ? "resume" : "open",
+      phase: body?.phase === "resume" ? "resume" : body?.phase === "conclude" ? "conclude" : "open",
       sources: sources.map(({ tags: _tags, anchors: _anchors, note: _note, ...source }) => source),
       model,
       recoveredWithFallback: failures.length > 0,
