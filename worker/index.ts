@@ -111,15 +111,29 @@ function finishReason(result: unknown): string | null {
 }
 
 export function extractPause(answer: string) {
-  const match = answer.match(/(?:^|\n)PAUSE_QUESTION:\s*(.+?)\s*$/s);
-  if (!match) return { answer: answer.trim(), pause: null };
-  const cleaned = answer.replace(/(?:^|\n)PAUSE_QUESTION:\s*(.+?)\s*$/s, "").trim();
-  return { answer: cleaned, pause: { question: match[1].trim() } };
+  let cleaned = answer.trim();
+  const choiceMatch = cleaned.match(/(?:^|\n)TABLE_CHOICE:\s*continue_or_close\s*$/);
+  const tableChoice = Boolean(choiceMatch);
+
+  if (choiceMatch) {
+    cleaned = cleaned.replace(/(?:^|\n)TABLE_CHOICE:\s*continue_or_close\s*$/, "").trim();
+  }
+
+  const pauseMatch = cleaned.match(/(?:^|\n)PAUSE_QUESTION:\s*(.+?)\s*$/s);
+  if (!pauseMatch) return { answer: cleaned, pause: null, tableChoice };
+
+  cleaned = cleaned.replace(/(?:^|\n)PAUSE_QUESTION:\s*(.+?)\s*$/s, "").trim();
+  return { answer: cleaned, pause: { question: pauseMatch[1].trim() }, tableChoice };
 }
 
 export function continuationInstruction(phase: unknown, pauseQuestion: unknown) {
-  if (phase !== "resume" || typeof pauseQuestion !== "string" || !pauseQuestion.trim()) return "";
-  return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Keep the existing table and source roster unless the user's answer itself makes one of those voices irrelevant. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
+  if (phase !== "resume") return "";
+
+  if (typeof pauseQuestion === "string" && pauseQuestion.trim()) {
+    return `\n\nCONTINUATION STATE\nThe user is answering the table's prior fault-line question:\n${pauseQuestion.trim()}\n\nTreat the user's latest message as an answer to that question. Resume the existing deliberation instead of restarting it. Keep the existing table and source roster unless the user's answer itself makes one of those voices irrelevant. Carry the answer through the competing frameworks, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not repeat the initial Table. Do not emit TABLE_CHOICE again on this normal second round. Do not ask another PAUSE_QUESTION unless the new answer genuinely creates a different decisive fault line that must be resolved before synthesis.`;
+  }
+
+  return `\n\nCONTINUATION STATE\nThe user chose to continue after the table's first-round Fault Line without adding a new factual answer. Treat the latest user message as a procedural signal to continue, not as substantive evidence. Resume the existing deliberation instead of restarting it. Keep the existing table and source roster. Do not repeat the initial Table or merely restate the same Fault Line. Deepen the strongest disagreement where useful, then normally proceed to Bourdain's Read, Where This Meets You when relevant, and a Council Finding. Do not emit TABLE_CHOICE again on this normal second round. Only ask a new PAUSE_QUESTION if a new, independent fact becomes genuinely decision-bearing.`;
 }
 
 export function ensureArtistWitnessBadge(answer: string, sources: PublicSource[]) {
