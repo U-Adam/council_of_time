@@ -21,7 +21,7 @@ type AttributionKind = keyof typeof ATTRIBUTION_DEFINITIONS;
 
 type CouncilPayload = {
   messages: ChatMessage[];
-  phase: "open" | "resume";
+  phase: "open" | "resume" | "conclude";
   pauseQuestion: string | null;
   sourceIds?: string[];
 };
@@ -168,7 +168,7 @@ export function App() {
   const [pending, setPending] = useState(false);
   const [pauseQuestion, setPauseQuestion] = useState<string | null>(null);
   const [tableChoice, setTableChoice] = useState(false);
-  const [pauseDecision, setPauseDecision] = useState<"choice" | "continue" | "closed">("choice");
+  const [pauseDecision, setPauseDecision] = useState<"choice" | "closed">("choice");
   const [failedAttempt, setFailedAttempt] = useState<FailedAttempt | null>(null);
   const [conveningLine, setConveningLine] = useState("Convening the table…");
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -195,7 +195,7 @@ export function App() {
     conveningSequence.current += 1;
   }
 
-  function beginConvening(payload: CouncilPayload, resuming: boolean) {
+  function beginConvening(payload: CouncilPayload) {
     clearProgressTimers();
     const sequence = ++conveningSequence.current;
     const schedule = (line: string, delay: number) => {
@@ -206,11 +206,20 @@ export function App() {
       );
     };
 
-    if (resuming) {
-      setConveningLine("Reopening the table…");
-      schedule("Bringing the existing table back into the argument…", 700);
-      schedule("Testing the fault line against the disagreement…", 2600);
-      schedule("Bourdain is checking what survives the second round…", 5200);
+    if (payload.phase === "resume") {
+      setConveningLine("Reopening the fault line…");
+      schedule("Bringing your answer back to the table…", 700);
+      schedule("Testing what your answer changes…", 2600);
+      schedule("Bourdain is checking where the disagreement now stands…", 5200);
+      schedule("The table is weighing the next move…", 8200);
+      return;
+    }
+
+    if (payload.phase === "conclude") {
+      setConveningLine("Continuing the table…");
+      schedule("Returning to the strongest disagreement…", 700);
+      schedule("Testing what survived the fault line…", 2600);
+      schedule("Bourdain is pulling the argument back to lived consequence…", 5200);
       schedule("Working toward a finding…", 8200);
       schedule("The table is still working toward the finding…", 12_000);
       return;
@@ -293,15 +302,15 @@ export function App() {
       setSources((current) => mergeSources(current, data.sources || []));
       setActiveSourceIds((data.sources || []).map((source) => source.id));
       setPauseQuestion(nextPause);
-      setTableChoice(Boolean(data.tableChoice || nextPause));
+      setTableChoice(Boolean(data.tableChoice));
       setPauseDecision("choice");
       setFailedAttempt(null);
     } catch (error) {
       const typed = error as Error & { requestId?: string };
       const timedOut = typed?.name === "AbortError";
       setPauseQuestion(priorPause);
-      setTableChoice(Boolean(priorPause));
-      setPauseDecision(priorPause ? "continue" : "choice");
+      setTableChoice(false);
+      setPauseDecision("choice");
       setFailedAttempt({
         payload,
         priorPause,
@@ -329,7 +338,7 @@ export function App() {
           ...transcript,
           {
             role: "assistant",
-            content: `The table paused before synthesis with this question for the user: ${priorPause}`,
+            content: `The table paused at the fault line with this question for the user: ${priorPause}`,
           },
         ]
       : transcript;
@@ -349,18 +358,18 @@ export function App() {
     setPauseDecision("choice");
     setFailedAttempt(null);
     setAboutOpen(false);
-    beginConvening(payload, answeringPause);
+    beginConvening(payload);
 
     await requestCouncil(payload, priorPause);
   }
 
-  async function continueWithoutAnswer() {
+  async function continueAfterAnswer() {
     if (pending || !tableChoice || pauseQuestion) return;
 
     const nextMessages: ChatMessage[] = [...transcript, { role: "user", content: "Continue the table." }];
     const payload: CouncilPayload = {
       messages: nextMessages,
-      phase: "resume",
+      phase: "conclude",
       pauseQuestion: null,
       sourceIds: activeSourceIds.length ? activeSourceIds : undefined,
     };
@@ -369,7 +378,7 @@ export function App() {
     setTableChoice(false);
     setPauseDecision("choice");
     setFailedAttempt(null);
-    beginConvening(payload, true);
+    beginConvening(payload);
 
     await requestCouncil(payload, null);
   }
@@ -382,7 +391,7 @@ export function App() {
     setTableChoice(false);
     setPauseDecision("choice");
     setFailedAttempt(null);
-    beginConvening(attempt.payload, attempt.payload.phase === "resume");
+    beginConvening(attempt.payload);
     await requestCouncil(attempt.payload, attempt.priorPause);
   }
 
@@ -391,13 +400,8 @@ export function App() {
     void submitQuestion(input);
   }
 
-  function continueAfterFaultLine() {
-    if (pauseQuestion) {
-      setPauseDecision("continue");
-      requestAnimationFrame(() => inputRef.current?.focus());
-      return;
-    }
-    void continueWithoutAnswer();
+  function continueAfterFaultLineAnswer() {
+    void continueAfterAnswer();
   }
 
   function callItANight() {
@@ -421,6 +425,7 @@ export function App() {
   }
 
   const hasConversation = messages.length > 0;
+  const awaitingFaultLineAnswer = Boolean(pauseQuestion) && !pending && !failedAttempt && !tableChoice;
   const atRoundBreak = tableChoice && !pending && !failedAttempt;
 
   return (
@@ -484,27 +489,29 @@ export function App() {
           </section>
         )}
 
+        {awaitingFaultLineAnswer && (
+          <section className="pause-card" role="region" aria-labelledby="fault-line-question">
+            <div className="section-kicker">Bourdain pauses the table</div>
+            <h2 id="fault-line-question">{pauseQuestion}</h2>
+            <p>Your answer is part of the deliberation. Once you answer it, you can decide whether to continue the table or call it a night.</p>
+          </section>
+        )}
+
         {atRoundBreak && (
-          <section className="pause-card" role="region" aria-labelledby="pause-question">
+          <section className="pause-card" role="region" aria-labelledby="round-break-title">
             <div className="section-kicker">
-              {pauseDecision === "closed" ? "The table calls it a night" : "At the fault line"}
+              {pauseDecision === "closed" ? "The table calls it a night" : "After the fault line"}
             </div>
-            <h2 id="pause-question">{pauseQuestion || "The first round ends here."}</h2>
+            <h2 id="round-break-title">
+              {pauseDecision === "closed" ? "We can leave it here." : "Keep going?"}
+            </h2>
             {pauseDecision === "closed" ? (
-              <p>We’ll leave the fault line open. Nothing is forced into a finding tonight.</p>
+              <p>Your answer is on the record, and the disagreement can remain unresolved without forcing a Council Finding.</p>
             ) : (
               <>
-                <p>
-                  {pauseQuestion
-                    ? pauseDecision === "continue"
-                      ? "Answer the fault-line question below. The table will carry your answer into the second round."
-                      : "Your answer could materially change the Council's reasoning. Continue the table to answer it, or call it a night and leave the disagreement honestly unresolved."
-                    : "The first round has reached its fault line. Continue into the second round for Bourdain's Read and a Council Finding, or call it a night here."}
-                </p>
+                <p>The Council has your answer. Continue for the concluding round, or call it a night here.</p>
                 <div className="error-actions" style={{ marginTop: 14 }}>
-                  {pauseDecision === "choice" && (
-                    <button type="button" onClick={continueAfterFaultLine}>Continue the table</button>
-                  )}
+                  <button type="button" onClick={continueAfterFaultLineAnswer}>Continue the table</button>
                   <button type="button" className="ghost-button" onClick={callItANight}>Call it a night</button>
                 </div>
               </>
@@ -512,7 +519,7 @@ export function App() {
           </section>
         )}
 
-        {(!tableChoice || (pauseQuestion && pauseDecision === "continue")) && pauseDecision !== "closed" && (
+        {!tableChoice && pauseDecision !== "closed" && (
           <form className="composer" onSubmit={onSubmit}>
             <label className="sr-only" htmlFor="council-question">
               {pauseQuestion ? "Answer the fault-line question" : "Ask the Council"}
@@ -585,7 +592,7 @@ export function App() {
             Each substantive table draws from relevant Council members and includes at least one Artist Witness. Claims about thinkers are grounded in sources; present-day applications are marked Derived or Speculative when the evidence requires that distance.
           </p>
           <p>
-            Every initial table reaches its fault line and stops. You can continue into a second round—answering a focused fault-line question when one matters—or call it a night without forcing a finding. The second round carries the disagreement toward Bourdain's Read and a Council Finding.
+            The first round reaches a genuine fault line and asks one focused question. After you answer it, you decide whether to continue into the concluding round or call it a night without forcing a finding. Continuing carries the answer through the disagreement toward Bourdain's Read and a Council Finding.
           </p>
           <button className="about-return" type="button" onClick={() => setAboutOpen(false)}>
             Return to the table
