@@ -167,6 +167,7 @@ export function App() {
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [pauseQuestion, setPauseQuestion] = useState<string | null>(null);
+  const [pauseDecision, setPauseDecision] = useState<"choice" | "continue" | "closed">("choice");
   const [failedAttempt, setFailedAttempt] = useState<FailedAttempt | null>(null);
   const [conveningLine, setConveningLine] = useState("Convening the table…");
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -290,11 +291,13 @@ export function App() {
       setSources((current) => mergeSources(current, data.sources || []));
       setActiveSourceIds((data.sources || []).map((source) => source.id));
       setPauseQuestion(data.pause?.question || null);
+      setPauseDecision("choice");
       setFailedAttempt(null);
     } catch (error) {
       const typed = error as Error & { requestId?: string };
       const timedOut = typed?.name === "AbortError";
       setPauseQuestion(priorPause);
+      setPauseDecision(priorPause ? "continue" : "choice");
       setFailedAttempt({
         payload,
         priorPause,
@@ -338,6 +341,7 @@ export function App() {
     setInput("");
     setPending(true);
     setPauseQuestion(null);
+    setPauseDecision("choice");
     setFailedAttempt(null);
     setAboutOpen(false);
     beginConvening(payload, answeringPause);
@@ -350,6 +354,7 @@ export function App() {
     const attempt = failedAttempt;
     setPending(true);
     setPauseQuestion(null);
+    setPauseDecision("choice");
     setFailedAttempt(null);
     beginConvening(attempt.payload, attempt.payload.phase === "resume");
     await requestCouncil(attempt.payload, attempt.priorPause);
@@ -360,12 +365,23 @@ export function App() {
     void submitQuestion(input);
   }
 
+  function continueAfterFaultLine() {
+    setPauseDecision("continue");
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  function callItANight() {
+    setInput("");
+    setPauseDecision("closed");
+  }
+
   function reset() {
     stopConvening();
     setMessages([]);
     setSources([]);
     setActiveSourceIds([]);
     setPauseQuestion(null);
+    setPauseDecision("choice");
     setFailedAttempt(null);
     setInput("");
     setAboutOpen(false);
@@ -438,34 +454,54 @@ export function App() {
 
         {pauseQuestion && !pending && !failedAttempt && (
           <section className="pause-card" role="region" aria-labelledby="pause-question">
-            <div className="section-kicker">Bourdain pauses the table</div>
+            <div className="section-kicker">
+              {pauseDecision === "closed" ? "The table calls it a night" : "Bourdain pauses the table"}
+            </div>
             <h2 id="pause-question">{pauseQuestion}</h2>
-            <p>Your answer could materially change the Council's reasoning. The table will wait.</p>
+            {pauseDecision === "closed" ? (
+              <p>We’ll leave the fault line open. Nothing is forced into a finding tonight.</p>
+            ) : (
+              <>
+                <p>
+                  {pauseDecision === "continue"
+                    ? "Answer the fault-line question below. The table will carry your answer through the disagreement."
+                    : "You can answer the fault-line question and keep going, or call it a night and leave the disagreement honestly unresolved."}
+                </p>
+                <div className="error-actions" style={{ marginTop: 14 }}>
+                  {pauseDecision === "choice" && (
+                    <button type="button" onClick={continueAfterFaultLine}>Continue the table</button>
+                  )}
+                  <button type="button" className="ghost-button" onClick={callItANight}>Call it a night</button>
+                </div>
+              </>
+            )}
           </section>
         )}
 
-        <form className="composer" onSubmit={onSubmit}>
-          <label className="sr-only" htmlFor="council-question">
-            {pauseQuestion ? "Answer the fault-line question" : "Ask the Council"}
-          </label>
-          <textarea
-            id="council-question"
-            ref={inputRef}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                void submitQuestion(input);
-              }
-            }}
-            placeholder={pauseQuestion ? "Answer the fault-line question…" : "What brings you to the table?"}
-            rows={1}
-          />
-          <button type="submit" className="send-button" disabled={!input.trim() || pending} aria-label="Send">
-            <ArrowUp size={20} />
-          </button>
-        </form>
+        {(!pauseQuestion || pauseDecision === "continue") && (
+          <form className="composer" onSubmit={onSubmit}>
+            <label className="sr-only" htmlFor="council-question">
+              {pauseQuestion ? "Answer the fault-line question" : "Ask the Council"}
+            </label>
+            <textarea
+              id="council-question"
+              ref={inputRef}
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void submitQuestion(input);
+                }
+              }}
+              placeholder={pauseQuestion ? "Answer the fault-line question…" : "What brings you to the table?"}
+              rows={1}
+            />
+            <button type="submit" className="send-button" disabled={!input.trim() || pending} aria-label="Send">
+              <ArrowUp size={20} />
+            </button>
+          </form>
+        )}
 
         {!hasConversation && (
           <>
@@ -515,7 +551,7 @@ export function App() {
             Each substantive table draws from relevant Council members and includes at least one Artist Witness. Claims about thinkers are grounded in sources; present-day applications are marked Derived or Speculative when the evidence requires that distance.
           </p>
           <p>
-            When one unresolved fact could materially change the reasoning, Bourdain pauses the table before synthesis. The point is not to produce a party line. It is to make the argument—and the thinking behind it—stronger.
+            When one unresolved fact could materially change the reasoning, Bourdain pauses the table before synthesis. You can stay with the fault line and continue, or call it a night without forcing a finding. The point is not to produce a party line. It is to make the argument—and the thinking behind it—stronger.
           </p>
           <button className="about-return" type="button" onClick={() => setAboutOpen(false)}>
             Return to the table
