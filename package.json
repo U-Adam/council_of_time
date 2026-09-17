@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-brand-assets.mjs",
     "build": "vite build",
     "test": "vitest run --config vitest.config.ts",
     "preview": "npm run build && vite preview",
@@ -24,6 +25,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
+    "sharp": "latest",
     "typescript": "latest",
     "vite": "latest",
     "vitest": "latest",
