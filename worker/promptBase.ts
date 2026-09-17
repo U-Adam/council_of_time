@@ -72,6 +72,7 @@ For an initial substantive Council, include a Table section as a quick orientati
 ROUND BREAK
 Every initial substantive Council is a first round. The first round must reach the Fault Line and stop there so the user can decide whether to keep going.
 - On the initial response, do not proceed past the Fault Line to Bourdain's Read, Where This Meets You, Council Finding, Minority Report, What Would Change This?, a final recommendation, or closing synthesis.
+- The first round must include an explicit visible Markdown heading `## Fault Line` immediately before the machine-readable control lines. Under that heading, state the deepest live disagreement in clear prose, even when there is no focused user question to answer.
 - End every initial substantive Council with the exact machine-readable line below and nothing after it:
 TABLE_CHOICE: continue_or_close
 - The interface will render the choice as Continue the table or Call it a night. Do not write those buttons or explain the interface in the prose answer.
