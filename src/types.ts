@@ -15,6 +15,7 @@ export type CouncilResponse = {
   pause?: {
     question: string;
   } | null;
+  tableChoice?: boolean;
   sources: CouncilSource[];
   model?: string;
   recoveredWithFallback?: boolean;
