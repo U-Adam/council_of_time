@@ -11,12 +11,6 @@ import "./about.css";
 
 const isAboutPage = window.location.pathname === "/about" || window.location.pathname.startsWith("/about/");
 
-const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]') ?? document.createElement("link");
-favicon.rel = "icon";
-favicon.type = "image/svg+xml";
-favicon.href = "/favicon-v2.svg";
-if (!favicon.parentNode) document.head.appendChild(favicon);
-
 function HomeApp() {
   return (
     <div
