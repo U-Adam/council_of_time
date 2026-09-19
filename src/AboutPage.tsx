@@ -223,8 +223,43 @@ const PANELS: Panel[] = [
     ),
   },
   {
-    id: "memory",
+    id: "membership",
     index: "08",
+    title: "Membership & Guests",
+    abstract:
+      "The model can choose among authorized voices, but it cannot appoint its own Council. Permanent membership, guest admission, and non-seatable historical sources are governed separately.",
+    action: "See who can sit at the table",
+    icon: <Users size={19} aria-hidden="true" />,
+    sourceBasis: "Council Roster · Artists & Witnesses · Round Table Constitution §§ 45–52",
+    body: (
+      <>
+        <p>
+          Permanent membership is controlled by the Council Roster and Artists & Witnesses documents. The language model selects among those authorized voices for relevance and productive disagreement; it does not have authority to create a new permanent member simply because someone has a body of work, appears in research, or would make an interesting argument.
+        </p>
+        <h3>Guests require a reason and a gate</h3>
+        <p>
+          A nonmember may be invited only when the permanent roster has a material intellectual blind spot and the proposed guest contributes a genuinely distinct framework, expertise, historical perspective, or lived witness. The guest must have adequate reliable sources, a clearly defined role, and enough evidence to support the same Direct, Derived, and Speculative attribution discipline used for permanent members. An appearance as a guest creates no future selection privilege.
+        </p>
+        <p>
+          The model may propose a guest, but it cannot autonomously seat an unregistered outsider. The runtime validates the visible Table against the participant set authorized for that deliberation. A generated response that inserts an unauthorized participant is rejected rather than quietly displayed.
+        </p>
+        <h3>Researchable does not mean seatable</h3>
+        <p>
+          Some historical figures may be necessary subjects of serious inquiry while remaining categorically ineligible for deliberative standing. The Council calls these <strong>Historical Source Only</strong> figures. Their writings, speeches, ideologies, and historical actions may be examined and accurately reconstructed where relevant, but they cannot appear as permanent members, Artist Witnesses, or autonomous Guests at the Table.
+        </p>
+        <p>
+          This category is intentionally narrow. It is not a blacklist for controversial or unpopular ideas. It applies at the extreme boundary where a central documented ideological or political project substantially rests on genocide or extermination, racial or ethnic supremacy and systematic dehumanization, denial of basic personhood on the basis of identity, mass political violence as a governing program, terrorism or organized violence against civilians as an ideological method, or comparable doctrines. Steelmanning a historical argument does not require granting its author moral authority at the table.
+        </p>
+        <h3>Corpus-mapped, not permanently complete</h3>
+        <p>
+          Permanent members are maintained through corpus maps: research-ready routes across their identifiable body of work, chronology, genre, attribution and provenance problems, authoritative archives, primary sources, and serious scholarship. “Corpus-Mapped” does not mean scholarship is finished or that every copyrighted work is stored by the Council. The maps remain auditable and revisable as scholarship and archives change.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "memory",
+    index: "09",
     title: "Memory, Revision & Limits",
     abstract:
       "The Council can preserve cases and philosophical development without turning old conclusions into doctrine or quietly inventing a worldview for the user.",

@@ -3,6 +3,8 @@ import { ARTIST_WITNESS_IDS, ensureArtistWitness } from "./artistWitness";
 import { ALL_SOURCE_CATALOG_V2, selectSourcesV2 } from "./selection";
 import type { PublicSource } from "./sources";
 import { createTablePlan } from "./tablePlan";
+import { authorizedParticipantSet, unauthorizedTableParticipants } from "./governance";
+import { voiceForSource } from "./sourceMeta";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -212,6 +214,7 @@ async function runCouncilModel(
   messages: Message[],
   systemPrompt: string,
   allowedSourceIds: Set<string>,
+  allowedParticipants: Set<string>,
   requestId: string,
 ) {
   const failures: Array<{ model: string; detail: string }> = [];
@@ -230,6 +233,11 @@ async function runCouncilModel(
       const invalidCitations = invalidCitationIds(raw, allowedSourceIds);
       if (invalidCitations.length) {
         throw new Error(`Model cited sources outside the allowed set: ${invalidCitations.join(", ")}`);
+      }
+
+      const invalidParticipants = unauthorizedTableParticipants(raw, allowedParticipants);
+      if (invalidParticipants.length) {
+        throw new Error(`Model seated participants outside the authorized table: ${invalidParticipants.join(", ")}`);
       }
 
       console.log(JSON.stringify({
@@ -305,6 +313,10 @@ async function handleCouncil(request: Request, env: Env) {
         recentIds,
       );
   const allowedSourceIds = new Set(sources.map((source) => source.id));
+  const sourceVoices = sources.map((source) => voiceForSource(source.id)).filter((voice): voice is string => Boolean(voice));
+  const allowedParticipants = tablePlan
+    ? authorizedParticipantSet(tablePlan.voices, tablePlan.artistWitness)
+    : authorizedParticipantSet(sourceVoices, null);
   const phaseInstruction = continuationInstruction(body?.phase, body?.pauseQuestion);
   const plannedArtist = tablePlan?.artistWitness
     ? ` The selected Artist Witness is ${tablePlan.artistWitness}.`
@@ -312,7 +324,7 @@ async function handleCouncil(request: Request, env: Env) {
   const tableInstruction = tablePlan
     ? `\n\nTABLE PLAN\nThis is an initial ${tablePlan.depth} Council. The Table is not optional and must seat every planned thinker as a separate row: ${tablePlan.voices.join(", ")}.${plannedArtist} That means at least ${tablePlan.minimumParticipants} participant rows. Anthony Bourdain moderates and does not count as one of those participant rows. Do not collapse the Table to three voices merely because three frameworks seem dominant. The point of the table is productive disagreement across distinct supported lenses. If one planned voice cannot be responsibly represented from the supplied sources, replace that seat with another supported supplied voice rather than shrinking below five participant rows. Keep each row compact so the larger table does not crowd out the Deliberation.`
     : "";
-  const selectionInstruction = `\n\nSELECTION DISCIPLINE\nThe supplied source roster was chosen for this question by relevance first, with recent repetition used only as a tiebreaker among comparably relevant voices. Use the strongest distinct perspectives actually supported by these sources. Do not default to a familiar recurring voice when another supplied voice is comparably relevant and adds a genuinely different tradition, discipline, or moral lens. Never sacrifice a materially stronger source merely for novelty or demographic rotation.`;
+  const selectionInstruction = `\n\nSELECTION DISCIPLINE\nThe supplied source roster was chosen for this question by relevance first, with recent repetition used only as a tiebreaker among comparably relevant voices. Use the strongest distinct perspectives actually supported by these sources. Do not default to a familiar recurring voice when another supplied voice is comparably relevant and adds a genuinely different tradition, discipline, or moral lens. Never sacrifice a materially stronger source merely for novelty or demographic rotation. Permanent membership is fixed by the canonical roster. Do not seat any unplanned or unregistered person. An outsider may be discussed as a source or subject, or proposed as a possible Guest, but may not be placed in the Table unless explicitly authorized by the runtime participant set.`;
   const systemPrompt = `${COUNCIL_SYSTEM_PROMPT}${phaseInstruction}${tableInstruction}${selectionInstruction}\n\nALLOWED SOURCES\n${formatSourceContext(sources)}`;
   const models = uniqueModels(env.COUNCIL_MODEL);
 
@@ -323,6 +335,7 @@ async function handleCouncil(request: Request, env: Env) {
       messages,
       systemPrompt,
       allowedSourceIds,
+      allowedParticipants,
       requestId,
     );
     const normalizedRaw = ensureArtistWitnessBadge(raw, sources);
