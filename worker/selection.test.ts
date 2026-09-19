@@ -71,6 +71,7 @@ describe("full-roster Council selection", () => {
       "George Carlin",
       "Charles Bukowski",
       "Ursula K. Le Guin",
+      "Kurt Vonnegut",
       "Dolly Parton",
       "Christopher Nolan",
       "Steven Spielberg",
@@ -84,7 +85,7 @@ describe("full-roster Council selection", () => {
     ];
     const artistVoices = new Set(ARTIST_SOURCE_CATALOG_V2.map((source) => voiceForSource(source.id)));
 
-    expect(ARTIST_SOURCE_CATALOG_V2.length).toBe(21);
+    expect(ARTIST_SOURCE_CATALOG_V2.length).toBe(22);
     for (const voice of required) {
       expect(artistVoices.has(voice), `Missing Artist Witness ${voice}`).toBe(true);
     }
@@ -97,6 +98,15 @@ describe("full-roster Council selection", () => {
 
     expect(plan.voices).toContain("Mary Graham");
     expect(plan.sourceIds).toContain("S44");
+  });
+
+  it("can explicitly convene Vonnegut as a permanent Artist Witness", () => {
+    const source = selectArtistWitnessV2(
+      "What does Kurt Vonnegut illuminate about bureaucracy, war, and human decency?",
+    );
+
+    expect(source.id).toBe("S79");
+    expect(voiceForSource(source.id)).toBe("Kurt Vonnegut");
   });
 
   it("routes labor, alienation, and capital to Marx when those concepts are central", () => {
