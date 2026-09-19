@@ -23,6 +23,15 @@ describe("Council participant governance", () => {
     expect(permanentParticipantNames()).not.toContain("Adolf Hitler");
   });
 
+  it("cannot authorize Historical Source Only or unregistered names even if they are passed to the planner", () => {
+    const allowed = authorizedParticipantSet(
+      ["Immanuel Kant", "Adolf Hitler", "A completely unregistered thinker"],
+      null,
+    );
+
+    expect(allowed.size).toBe(2); // Kant + Bourdain
+  });
+
   it("defaults unknown outsiders to non-seatable rather than silently treating them as guests", () => {
     expect(APPROVED_GUESTS).toEqual([]);
     expect(participantStatus("A completely unregistered thinker")).toBe("unregistered");
@@ -39,6 +48,18 @@ describe("Council participant governance", () => {
 Adolf Hitler is mentioned here only as a historical subject.`;
 
     expect(tableParticipantNames(answer)).toEqual(["Immanuel Kant", "David Byrne"]);
+  });
+
+  it("still validates the participant table if the model omits or renames the Table heading", () => {
+    const allowed = authorizedParticipantSet(["Hannah Arendt"], null);
+    const answer = `### Voices in play
+| Voice | Core perspective | Application to this question |
+| --- | --- | --- |
+| Hannah Arendt | Judgment [S9] | Tests responsibility. |
+| Adolf Hitler | Ideology | Unauthorized seat. |`;
+
+    expect(tableParticipantNames(answer)).toEqual(["Hannah Arendt", "Adolf Hitler"]);
+    expect(unauthorizedTableParticipants(answer, allowed)).toEqual(["Adolf Hitler"]);
   });
 
   it("rejects a rogue thinker seated in the Table even when the name is real", () => {
