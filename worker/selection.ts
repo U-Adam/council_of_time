@@ -3,6 +3,7 @@ import { EXPANDED_ARTIST_SOURCE_CATALOG } from "./expandedArtistSources";
 import { ROSTER_SOURCE_CATALOG } from "./rosterSources";
 import { SOURCE_CATALOG as LEGACY_SOURCE_CATALOG, type PublicSource } from "./sources";
 import { sourceMeta, voiceForSource } from "./sourceMeta";
+import { isCanonicalArtistWitness, isCanonicalThinker } from "./canonicalRoster";
 
 export const THINKER_SOURCE_CATALOG: PublicSource[] = [...LEGACY_SOURCE_CATALOG, ...ROSTER_SOURCE_CATALOG];
 export const ARTIST_SOURCE_CATALOG_V2: PublicSource[] = [
@@ -200,7 +201,7 @@ function thinkerCandidates(text: string) {
 
   for (const source of THINKER_SOURCE_CATALOG) {
     const meta = sourceMeta(source.id);
-    if (!meta || meta.role !== "thinker") continue;
+    if (!meta || meta.role !== "thinker" || !isCanonicalThinker(meta.voice)) continue;
     const scored = scoreSource(source, text, concepts);
     const existing = grouped.get(meta.voice);
     const candidate: MemberCandidate = {
@@ -270,7 +271,7 @@ function fallbackCandidates(existingVoices: Set<string>, text: string) {
   for (const id of orderedIds) {
     const source = byId.get(id);
     const meta = source && sourceMeta(id);
-    if (!source || !meta || existingVoices.has(meta.voice)) continue;
+    if (!source || !meta || !isCanonicalThinker(meta.voice) || existingVoices.has(meta.voice)) continue;
     results.push({
       voice: meta.voice,
       family: meta.family,
@@ -333,19 +334,24 @@ export function selectArtistWitnessV2(
   const recent = recentVoiceCounts(recentSourceIds);
   const contextVoices = new Set(contextBasis.map((source) => voiceForSource(source.id)).filter(Boolean));
 
-  const candidates = ARTIST_SOURCE_CATALOG_V2.map((source) => {
-    const meta = sourceMeta(source.id);
-    const direct = scoreSource(source, text, conceptsFor(text));
-    const contextScore = artistContextScore(source, contextBasis, concepts);
-    const duplicateThinkerVoice = Boolean(meta?.voice && contextVoices.has(meta.voice));
-    const score = direct.score + contextScore - (duplicateThinkerVoice && !direct.explicit ? 20 : 0);
-    return {
-      source,
-      voice: meta?.voice || source.title,
-      score,
-      explicit: direct.explicit,
-    };
-  });
+  const candidates = ARTIST_SOURCE_CATALOG_V2
+    .filter((source) => {
+      const voice = voiceForSource(source.id);
+      return Boolean(voice && isCanonicalArtistWitness(voice));
+    })
+    .map((source) => {
+      const meta = sourceMeta(source.id);
+      const direct = scoreSource(source, text, conceptsFor(text));
+      const contextScore = artistContextScore(source, contextBasis, concepts);
+      const duplicateThinkerVoice = Boolean(meta?.voice && contextVoices.has(meta.voice));
+      const score = direct.score + contextScore - (duplicateThinkerVoice && !direct.explicit ? 20 : 0);
+      return {
+        source,
+        voice: meta?.voice || source.title,
+        score,
+        explicit: direct.explicit,
+      };
+    });
 
   const maxRaw = Math.max(...candidates.map((candidate) => candidate.score));
   const nearBand = candidates.filter(
