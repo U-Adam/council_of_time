@@ -121,4 +121,13 @@ export const EXPANDED_ARTIST_SOURCE_CATALOG: PublicSource[] = [
     tags: ["self-invention", "artistic maturation", "ambition", "fame", "intimacy", "masculinity", "friendship", "loneliness", "altered states", "substance use", "vulnerability", "mortality", "experimentation", "success", "meaning"],
     note: "Use Mac Miller as a music and cultural witness on self-invention, artistic maturation, ambition, fame, intimacy, masculinity, friendship, loneliness, vulnerability, altered states, mortality, experimentation, and the tension between success and meaning. Song narrators are not automatically Miller; lyrics are not transparent autobiography or clinical evidence; do not read his 2018 death backward as the single key to the work.",
   },
+  {
+    id: "S79",
+    title: "Kurt Vonnegut Papers — Indiana University Lilly Library",
+    url: "https://libraries.indiana.edu/lilly-library/kurt-vonnegut",
+    kind: "official",
+    anchors: ["kurt vonnegut", "vonnegut"],
+    tags: ["war", "dresden", "absurdity", "humanism", "technology", "automation", "bureaucracy", "free will", "fatalism", "kindness", "mortality", "ecology", "nuclear risk", "satire", "class"],
+    note: "Use Vonnegut as a literary and cultural witness on war and moral memory, absurdity and human decency, technology and dehumanization, bureaucracy, free will and fatalism, ecological and nuclear risk, class, mortality, and humor as moral method. Narrators and characters—including Kilgore Trout—are not transparent authorial mouthpieces; Slaughterhouse-Five is not standalone historical authority for Dresden; distinguish lifetime publication from posthumous editorial recovery.",
+  },
 ];
