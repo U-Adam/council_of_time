@@ -1,4 +1,8 @@
-import { SOURCE_META } from "./sourceMeta";
+import {
+  CANONICAL_ARTIST_WITNESSES,
+  CANONICAL_MODERATOR,
+  CANONICAL_THINKERS,
+} from "./canonicalRoster";
 
 export type ParticipantStatus =
   | "permanent_thinker"
@@ -47,24 +51,9 @@ function normalizeName(value: string) {
     .toLowerCase();
 }
 
-const PERMANENT_THINKERS = new Set(
-  Object.values(SOURCE_META)
-    .filter((meta) => meta.role === "thinker")
-    .map((meta) => normalizeName(meta.voice)),
-);
-
-const PERMANENT_WITNESSES = new Set(
-  Object.values(SOURCE_META)
-    .filter((meta) => meta.role === "artist")
-    .map((meta) => normalizeName(meta.voice)),
-);
-
-const MODERATORS = new Set(
-  Object.values(SOURCE_META)
-    .filter((meta) => meta.role === "moderator")
-    .map((meta) => normalizeName(meta.voice)),
-);
-
+const PERMANENT_THINKERS = new Set(CANONICAL_THINKERS.map(normalizeName));
+const PERMANENT_WITNESSES = new Set(CANONICAL_ARTIST_WITNESSES.map(normalizeName));
+const MODERATORS = new Set([normalizeName(CANONICAL_MODERATOR)]);
 const APPROVED_GUEST_NAMES = new Set(APPROVED_GUESTS.map((guest) => normalizeName(guest.name)));
 const HISTORICAL_ONLY_NAMES = new Set(HISTORICAL_SOURCE_ONLY.map((entry) => normalizeName(entry.name)));
 
@@ -83,14 +72,15 @@ export function authorizedParticipantSet(
   artistWitness: string | null = null,
   approvedGuests: string[] = [],
 ) {
+  const approved = approvedGuests.filter((name) => APPROVED_GUEST_NAMES.has(normalizeName(name)));
+  const requested = [...plannedVoices, artistWitness || "", CANONICAL_MODERATOR, ...approved].filter(Boolean);
+
   return new Set(
-    [
-      ...plannedVoices,
-      artistWitness || "",
-      "Anthony Bourdain",
-      ...approvedGuests.filter((name) => APPROVED_GUEST_NAMES.has(normalizeName(name))),
-    ]
-      .filter(Boolean)
+    requested
+      .filter((name) => {
+        const status = participantStatus(name);
+        return status === "permanent_thinker" || status === "permanent_witness" || status === "moderator" || status === "approved_guest";
+      })
       .map(normalizeName),
   );
 }
@@ -150,9 +140,9 @@ export function historicalSourceOnlyNames() {
 }
 
 export function permanentParticipantNames() {
-  return [...new Set(
-    Object.values(SOURCE_META)
-      .filter((meta) => meta.role === "thinker" || meta.role === "artist" || meta.role === "moderator")
-      .map((meta) => meta.voice),
-  )];
+  return [
+    ...CANONICAL_THINKERS,
+    ...CANONICAL_ARTIST_WITNESSES,
+    CANONICAL_MODERATOR,
+  ];
 }
