@@ -69,6 +69,7 @@ export const CANONICAL_ARTIST_WITNESSES = [
   "George Carlin",
   "Charles Bukowski",
   "Ursula K. Le Guin",
+  "Kurt Vonnegut",
   "Dolly Parton",
   "Christopher Nolan",
   "Steven Spielberg",
