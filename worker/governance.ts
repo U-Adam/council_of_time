@@ -85,41 +85,50 @@ export function authorizedParticipantSet(
   );
 }
 
+function cellsForRow(line: string) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|")) return [];
+  return trimmed
+    .split("|")
+    .slice(1, trimmed.endsWith("|") ? -1 : undefined)
+    .map((cell) => cell.trim());
+}
+
 function isSeparatorRow(cells: string[]) {
-  return cells.every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+}
+
+function cleanParticipantCell(value: string) {
+  return value
+    .replace(/`Artist Witness`/gi, "")
+    .replace(/\[(?:S\d+|Guest[^\]]*)\]/gi, "")
+    .replace(/[\*_`~]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function tableParticipantNames(answer: string): string[] {
   const lines = answer.split("\n");
-  const headingIndex = lines.findIndex((line) => /^#{1,6}\s+(?:the\s+)?table\s*$/i.test(line.trim()));
-  if (headingIndex === -1) return [];
-
   const names: string[] = [];
-  let sawTable = false;
 
-  for (let index = headingIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index].trim();
-    if (/^#{1,6}\s+/.test(line)) break;
-    if (!line.startsWith("|")) {
-      if (sawTable && line) break;
-      continue;
+  // Validate the actual GFM table signature rather than trusting the model to preserve
+  // a specific heading. This prevents a rogue seat from bypassing validation merely by
+  // omitting or renaming "## Table" while still rendering a participant table.
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const header = cellsForRow(lines[index]);
+    if (header.length < 3 || !/^voice$/i.test(cleanParticipantCell(header[0]))) continue;
+
+    const separator = cellsForRow(lines[index + 1]);
+    if (!isSeparatorRow(separator)) continue;
+
+    for (let rowIndex = index + 2; rowIndex < lines.length; rowIndex += 1) {
+      const row = cellsForRow(lines[rowIndex]);
+      if (row.length < 3 || isSeparatorRow(row)) break;
+      const cleaned = cleanParticipantCell(row[0]);
+      if (cleaned) names.push(cleaned);
     }
 
-    const cells = line
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-    if (cells.length < 3) continue;
-    sawTable = true;
-
-    if (/^voice$/i.test(cells[0]) || isSeparatorRow(cells)) continue;
-    const cleaned = cells[0]
-      .replace(/`Artist Witness`/gi, "")
-      .replace(/\[(?:S\d+|Guest[^\]]*)\]/gi, "")
-      .replace(/[\*_`~]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (cleaned) names.push(cleaned);
+    break;
   }
 
   return names;
