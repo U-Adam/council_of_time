@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { App } from "./App";
 import { AboutPage } from "./AboutPage";
 import { ThemeToggle } from "./ThemeToggle";
+import { installEvidenceInspector } from "./evidenceInspector";
 import "./tokens.css";
 import "./base.css";
 import "./home.css";
@@ -32,3 +33,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     {isAboutPage ? <AboutPage /> : <HomeApp />}
   </React.StrictMode>,
 );
+
+if (!isAboutPage) installEvidenceInspector();
