@@ -1,38 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { prepareEvidenceMarkdown } from "./evidence";
+import { CITATION_MARKER, parseClaimEvidence } from "./evidence";
 
-const valid = new Set(["S5", "S9"]);
-
-describe("claim evidence preparation", () => {
-  it("treats a cited unmarked claim as Direct", () => {
-    const result = prepareEvidenceMarkdown("Kant grounds dignity in rational agency [S5].", valid);
-    expect(result.evidence).toHaveLength(1);
-    expect(result.evidence[0]).toMatchObject({ sourceId: "S5", attribution: "Direct" });
-    expect(result.evidence[0].claim).toBe("Kant grounds dignity in rational agency.");
-    expect(result.markdown).toContain("[5](#claim-evidence-0)");
+describe("claim evidence parsing", () => {
+  it("treats an unmarked cited claim as Direct", () => {
+    const result = parseClaimEvidence(`Kant grounds dignity in rational agency ${CITATION_MARKER}.`);
+    expect(result).toEqual({
+      claim: "Kant grounds dignity in rational agency.",
+      attribution: "Direct",
+    });
   });
 
   it("carries Derived provenance into the evidence record", () => {
-    const result = prepareEvidenceMarkdown(
-      "A Kantian reading would treat this promise as a test of respect [S5] {{Derived}}.",
-      valid,
+    const result = parseClaimEvidence(
+      `A Kantian reading would treat this promise as a test of respect ${CITATION_MARKER} {{Derived}}.`,
     );
-    expect(result.evidence[0].attribution).toBe("Derived");
-    expect(result.markdown).toContain("`Derived`");
+    expect(result.attribution).toBe("Derived");
+    expect(result.claim).toBe("A Kantian reading would treat this promise as a test of respect.");
   });
 
-  it("uses the cited table cell rather than a different cell's attribution marker", () => {
-    const result = prepareEvidenceMarkdown(
-      "| Voice | Core perspective | Application |\n| --- | --- | --- |\n| Kant | Dignity and duty [S5] | This tests the promise {{Derived}} |",
-      valid,
+  it("carries Speculative provenance into the evidence record", () => {
+    const result = parseClaimEvidence(
+      `This modern extension goes beyond the historical source ${CITATION_MARKER} {{Speculative}}.`,
     );
-    expect(result.evidence[0].claim).toBe("Dignity and duty");
-    expect(result.evidence[0].attribution).toBe("Direct");
+    expect(result.attribution).toBe("Speculative");
   });
 
-  it("does not convert source IDs that were not supplied by the API", () => {
-    const result = prepareEvidenceMarkdown("Supported [S5]. Unknown [S404].", valid);
-    expect(result.evidence).toHaveLength(1);
-    expect(result.markdown).toContain("[S404]");
+  it("focuses on the sentence containing the citation", () => {
+    const result = parseClaimEvidence(
+      `First sentence. The supported claim is here ${CITATION_MARKER}. A later sentence is separate.`,
+    );
+    expect(result.claim).toBe("The supported claim is here.");
   });
 });
